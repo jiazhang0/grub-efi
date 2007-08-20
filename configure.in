@@ -86,7 +86,6 @@ if test "x$ac_cv_prog_gcc" = xyes; then
     if test "x$with_binutils" != x; then
       CFLAGS="-B$with_binutils/ $CFLAGS"
     fi
-    LOADER_LDFLAGS="-Wl,--build-id=none"
     STAGE1_CFLAGS="-O2"
     GRUB_CFLAGS="-O2"
     AC_CACHE_CHECK([whether optimization for size works], size_flag, [
@@ -118,7 +117,9 @@ if test "x$ac_cv_prog_gcc" = xyes; then
   fi
 fi
 
+LOADER_LDFLAGS="-Wl,--build-id=none"
 AC_SUBST(LOADER_LDFLAGS)
+
 AC_SUBST(STAGE1_CFLAGS)
 AC_SUBST(STAGE2_CFLAGS)
 AC_SUBST(GRUB_CFLAGS)
