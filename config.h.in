@@ -1,4 +1,4 @@
-/* config.h.in.  Generated from configure.ac by autoheader.  */
+/* config.h.in.  Generated from configure.in by autoheader.  */
 
 /* Define if an absolute indirect call/jump must NOT be prefixed with `*' */
 #undef ABSOLUTE_WITHOUT_ASTERISK
