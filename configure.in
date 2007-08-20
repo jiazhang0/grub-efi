@@ -86,8 +86,9 @@ if test "x$ac_cv_prog_gcc" = xyes; then
     if test "x$with_binutils" != x; then
       CFLAGS="-B$with_binutils/ $CFLAGS"
     fi
-    STAGE1_CFLAGS="-O2 -Wl,--build-id=none"
-    GRUB_CFLAGS="-O2 -Wl,--build-id=none"
+    LOADER_LDFLAGS="-Wl,--build-id=none"
+    STAGE1_CFLAGS="-O2"
+    GRUB_CFLAGS="-O2"
     AC_CACHE_CHECK([whether optimization for size works], size_flag, [
       saved_CFLAGS=$CFLAGS
       CFLAGS="-Os -g"
@@ -95,9 +96,9 @@ if test "x$ac_cv_prog_gcc" = xyes; then
       CFLAGS=$saved_CFLAGS
     ])
     if test "x$size_flag" = xyes; then
-      STAGE2_CFLAGS="-Os -Wl,--build-id=none"
+      STAGE2_CFLAGS="-Os"
     else
-      STAGE2_CFLAGS="-O2 -fno-strength-reduce -fno-unroll-loops -Wl,--build-id=none"
+      STAGE2_CFLAGS="-O2 -fno-strength-reduce -fno-unroll-loops"
     fi
     # OpenBSD has a GCC extension for protecting applications from
     # stack smashing attacks, but GRUB doesn't want this feature.
@@ -112,11 +113,12 @@ if test "x$ac_cv_prog_gcc" = xyes; then
       CFLAGS=$saved_CFLAGS
     ])
     if test "x$no_stack_protector_flag" = xyes; then
-      STAGE2_CFLAGS="$STAGE2_CFLAGS -fno-stack-protector -Wl,--build-id=none"
+      STAGE2_CFLAGS="$STAGE2_CFLAGS -fno-stack-protector"
     fi
   fi
 fi
 
+AC_SUBST(LOADER_LDFLAGS)
 AC_SUBST(STAGE1_CFLAGS)
 AC_SUBST(STAGE2_CFLAGS)
 AC_SUBST(GRUB_CFLAGS)

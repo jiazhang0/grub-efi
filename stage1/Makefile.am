@@ -5,7 +5,7 @@ CLEANFILES = $(nodist_pkgdata_DATA)
 
 # We can't use builtins or standard includes.
 AM_CCASFLAGS = $(STAGE1_CFLAGS) -fno-builtin -nostdinc
-LDFLAGS = -nostdlib -Wl,-N,-Ttext,7C00
+LDFLAGS = $(LOADER_LDFLAGS) -nostdlib -Wl,-N,-Ttext,7C00
 
 noinst_PROGRAMS = stage1.exec
 stage1_exec_SOURCES = stage1.S stage1.h
