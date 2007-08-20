@@ -87,7 +87,7 @@ if test "x$ac_cv_prog_gcc" = xyes; then
       CFLAGS="-B$with_binutils/ $CFLAGS"
     fi
     STAGE1_CFLAGS="-O2 -Wl,--build-id=none"
-    GRUB_CFLAGS="-O2"
+    GRUB_CFLAGS="-O2 -Wl,--build-id=none"
     AC_CACHE_CHECK([whether optimization for size works], size_flag, [
       saved_CFLAGS=$CFLAGS
       CFLAGS="-Os -g"
