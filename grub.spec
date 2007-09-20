@@ -1,9 +1,9 @@
 Name: grub
 Version: 0.97
-Release: 17
+Release: 19
 Summary: GRUB - the Grand Unified Boot Loader.
 Group: System Environment/Base
-License: GPL
+License: GPLv2+
 
 ExclusiveArch: i386 x86_64
 BuildRequires: binutils >= 2.9.1.0.23, ncurses-devel, ncurses-static, texinfo
@@ -79,8 +79,15 @@ fi
 %{_datadir}/grub
 
 %changelog
-* Thu Sep 20 2007 Peter Jones <pjones@redhat.com> - 0.97-17
+* Thu Sep 20 2007 Peter Jones <pjones@redhat.com> - 0.97-19
 - Fix dmraid detection on Intel (isw) controllers in grub-install .
+
+* Wed Aug 22 2007 Peter Jones <pjones@redhat.com> - 0.97-18
+- Fix license tag.
+
+* Mon Aug 20 2007 Peter Jones <pjones@redhat.com> - 0.97-17
+- Use --build-id=none instead of stripping out the build-id notes in the
+  first and second stage loaders.
 
 * Tue Aug 7 2007 Peter Jones <pjones@redhat.com> - 0.97-16
 - Add ext[23] large inode support (patch from Eric Sandeen)
