@@ -1,6 +1,6 @@
 Name: grub
 Version: 0.97
-Release: 16
+Release: 17
 Summary: GRUB - the Grand Unified Boot Loader.
 Group: System Environment/Base
 License: GPL
@@ -79,6 +79,9 @@ fi
 %{_datadir}/grub
 
 %changelog
+* Thu Sep 20 2007 Peter Jones <pjones@redhat.com> - 0.97-17
+- Fix dmraid detection on Intel (isw) controllers in grub-install .
+
 * Tue Aug 7 2007 Peter Jones <pjones@redhat.com> - 0.97-16
 - Add ext[23] large inode support (patch from Eric Sandeen)
 - Fix auto* breakage that happened when we switched from autoreconf to autoconf
