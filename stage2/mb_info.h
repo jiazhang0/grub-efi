@@ -44,10 +44,10 @@ struct mod_list
 
 struct AddrRangeDesc
 {
-  unsigned long size;
+  unsigned int size;
   unsigned long long BaseAddr;
   unsigned long long Length;
-  unsigned long Type;
+  unsigned int Type;
   
   /* unspecified optional padding... */
 } __attribute__ ((packed));

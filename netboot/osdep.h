@@ -21,10 +21,10 @@
 #elif defined(__LITTLE_ENDIAN)
 #	if !defined(__constant_htonl)
 #		define __constant_htonl(x) \
-        ((unsigned long int)((((unsigned long int)(x) & 0x000000ffU) << 24) | \
-                             (((unsigned long int)(x) & 0x0000ff00U) <<  8) | \
-                             (((unsigned long int)(x) & 0x00ff0000U) >>  8) | \
-                             (((unsigned long int)(x) & 0xff000000U) >> 24)))
+        ((unsigned int)((((unsigned int)(x) & 0x000000ffU) << 24) | \
+                        (((unsigned int)(x) & 0x0000ff00U) <<  8) | \
+                        (((unsigned int)(x) & 0x00ff0000U) >>  8) | \
+                        (((unsigned int)(x) & 0xff000000U) >> 24)))
 #	endif
 #	if !defined(__constant_htons)
 #		define __constant_htons(x) \
@@ -36,11 +36,11 @@
 #endif
 
 #define ntohl(x) \
-(__builtin_constant_p(x) ? \
+(__builtin_constant_p((unsigned int)x) ? \
  __constant_htonl((x)) : \
  __swap32(x))
 #define htonl(x) \
-(__builtin_constant_p(x) ? \
+(__builtin_constant_p((unsigned int)x) ? \
  __constant_htonl((x)) : \
  __swap32(x))
 #define ntohs(x) \
@@ -52,21 +52,29 @@
  __constant_htons((x)) : \
  __swap16(x))
 
-static inline unsigned long int __swap32(unsigned long int x)
+static inline unsigned int __swap32(unsigned int x)
 {
+#ifdef PLATFORM_EFI
+	__asm__("bswapl %0" : "=r" (x) : "0" (x));
+#else
 	__asm__("xchgb %b0,%h0\n\t"
 		"rorl $16,%0\n\t"
 		"xchgb %b0,%h0"
 		: "=q" (x)
 		: "0" (x));
+#endif
 	return x;
 }
 
 static inline unsigned short int __swap16(unsigned short int x)
 {
+#ifdef PLATFORM_EFI
+	return __constant_htons(x);
+#else
 	__asm__("xchgb %b0,%h0"
 		: "=q" (x)
 		: "0" (x));
+#endif
 	return x;
 }
 
@@ -76,7 +84,7 @@ static inline unsigned short int __swap16(unsigned short int x)
 
 #include "linux-asm-io.h"
 
-typedef	unsigned long Address;
+typedef	unsigned int Address;
 
 /* ANSI prototyping macro */
 #ifdef	__STDC__

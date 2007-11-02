@@ -320,7 +320,7 @@ parse_format(const char *s, char *format, int *len)
 #define isLOWER(c) ((c) >= 'a' && (c) <= 'z')
 
 static inline char *
-tparam_internal(const char *string, int *dataptr)
+tparam_internal(const char *string, va_list args)
 {
 #define NUM_VARS 26
     char *p_is_s[9];
@@ -461,9 +461,9 @@ tparam_internal(const char *string, int *dataptr)
 	 * a char* and an int may not be the same size on the stack.
 	 */
 	if (p_is_s[i] != 0) {
-	  p_is_s[i] = (char *)(*(dataptr++));
+	  p_is_s[i] = va_arg (args, char *);
 	} else {
-	  param[i] = (int)(*(dataptr++));
+	  param[i] = va_arg (args, int);
 	}
     }
 
@@ -716,11 +716,11 @@ char *
 grub_tparm(const char *string,...)
 {
     char *result;
-    int *dataptr = (int *) &string;
+    va_list ap;
 
-    dataptr++;
-
-    result = tparam_internal(string, dataptr);
+    va_start (ap, string);
+    result = tparam_internal(string, ap);
+    va_end(ap);
 
     return result;
 }

@@ -30,8 +30,8 @@ static struct dir_entry *vstafs_nextdir (void);
 
 
 #define FIRST_SECTOR	((struct first_sector *) FSYS_BUF)
-#define FILE_INFO	((struct fs_file *) (int) FIRST_SECTOR + 8192)
-#define DIRECTORY_BUF	((struct dir_entry *) (int) FILE_INFO + 512)
+#define FILE_INFO	((struct fs_file *) (unsigned long) FIRST_SECTOR + 8192)
+#define DIRECTORY_BUF	((struct dir_entry *) (unsigned long) FILE_INFO + 512)
 
 #define ROOT_SECTOR	1
 

@@ -127,16 +127,16 @@ print_error (void)
 }
 
 char *
-convert_to_ascii (char *buf, int c,...)
+convert_to_ascii (char *buf, int c, unsigned int num)
 {
-  unsigned long num = *((&c) + 1), mult = 10;
+  unsigned int mult = 10;
   char *ptr = buf;
 
 #ifndef STAGE1_5
   if (c == 'x' || c == 'X')
     mult = 16;
 
-  if ((num & 0x80000000uL) && c == 'd')
+  if ((int) num < 0 && c == 'd')
     {
       num = (~num) + 1;
       *(ptr++) = '-';
@@ -175,87 +175,104 @@ grub_putstr (const char *str)
     grub_putchar (*str++);
 }
 
-void
-grub_printf (char *format,...)
+int
+grub_vsprintf (char *str, const char *fmt, va_list args)
 {
-  int *dataptr = (int *) &format;
-  char c, str[16];
+  char c;
+  int count = 0;
+  auto void write_char (unsigned char ch);
+  auto void write_str (const char *s);
   
-  dataptr++;
+  void write_char (unsigned char ch)
+    {
+      if (str)
+	*str++ = ch;
+      else
+	grub_putchar (ch);
 
-  while ((c = *(format++)) != 0)
+      count++;
+    }
+
+  void write_str (const char *s)
+    {
+      while (*s)
+	write_char (*s++);
+    }
+
+  while ((c = *fmt++) != 0)
     {
       if (c != '%')
-	grub_putchar (c);
+	write_char (c);
       else
-	switch (c = *(format++))
-	  {
+	{
+	  char tmp[32];
+	  int n;
 #ifndef STAGE1_5
-	  case 'd':
-	  case 'x':
-	  case 'X':
+	  char *p;
 #endif
-	  case 'u':
-	    *convert_to_ascii (str, c, *((unsigned long *) dataptr++)) = 0;
-	    grub_putstr (str);
-	    break;
+
+	  c = *fmt++;
+	  switch (c)
+	    {
+#ifndef STAGE1_5
+	    case 'd':
+	    case 'x':
+	    case 'X':
+#endif
+	    case 'u':
+	      n = va_arg (args, int);
+	      *convert_to_ascii (tmp, c, n) = 0;
+
+	      write_str (tmp);
+	      break;
 
 #ifndef STAGE1_5
-	  case 'c':
-	    grub_putchar ((*(dataptr++)) & 0xff);
-	    break;
+	    case 'c':
+	      n = va_arg (args, int);
+	      write_char (n & 0xff);
+	      break;
 
-	  case 's':
-	    grub_putstr ((char *) *(dataptr++));
-	    break;
+	    case 's':
+	      p = va_arg (args, char *);
+	      write_str (p);
+	      break;
 #endif
-	  }
+
+	    default:
+	      write_char (c);
+	      break;
+	    }
+	}
     }
+
+  if (str)
+    *str = '\0';
+
+  return count;
+}
+
+void
+grub_printf (char *fmt, ...)
+{
+  va_list ap;
+
+  va_start (ap, fmt);
+  grub_vsprintf (0, fmt, ap);
+  va_end (ap);
 }
 
 #ifndef STAGE1_5
 int
-grub_sprintf (char *buffer, const char *format, ...)
+grub_sprintf (char *str, const char *fmt, ...)
 {
-  /* XXX hohmuth
-     ugly hack -- should unify with printf() */
-  int *dataptr = (int *) &format;
-  char c, *ptr, str[16];
-  char *bp = buffer;
+  va_list ap;
+  int ret;
 
-  dataptr++;
+  va_start (ap, fmt);
+  ret = grub_vsprintf (str, fmt, ap);
+  va_end (ap);
 
-  while ((c = *format++) != 0)
-    {
-      if (c != '%')
-	*bp++ = c; /* putchar(c); */
-      else
-	switch (c = *(format++))
-	  {
-	  case 'd': case 'u': case 'x':
-	    *convert_to_ascii (str, c, *((unsigned long *) dataptr++)) = 0;
-
-	    ptr = str;
-
-	    while (*ptr)
-	      *bp++ = *(ptr++); /* putchar(*(ptr++)); */
-	    break;
-
-	  case 'c': *bp++ = (*(dataptr++))&0xff;
-	    /* putchar((*(dataptr++))&0xff); */
-	    break;
-
-	  case 's':
-	    ptr = (char *) (*(dataptr++));
-
-	    while ((c = *ptr++) != 0)
-	      *bp++ = c; /* putchar(c); */
-	    break;
-	  }
-    }
-
-  *bp = 0;
-  return bp - buffer;
+  return ret;
 }
 
 
@@ -1257,7 +1274,7 @@ grub_memcpy(void *dest, const void *src, int len)
 void *
 grub_memmove (void *to, const void *from, int len)
 {
-   if (memcheck ((int) to, len))
+  if (memcheck ((unsigned long) to, len))
      {
        /* This assembly code is stolen from
 	  linux-2.2.2/include/asm-i386/string.h. This is not very fast
@@ -1295,7 +1312,7 @@ grub_memset (void *start, int c, int len)
 {
   char *p = start;
 
-  if (memcheck ((int) start, len))
+  if (memcheck ((unsigned long) start, len))
     {
       while (len -- > 0)
 	*p ++ = c;

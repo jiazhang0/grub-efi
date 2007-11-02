@@ -92,7 +92,7 @@ struct fat_bpb {
 #define FAT_DIRENTRY_FIRST_CLUSTER(entry) \
   ((*((unsigned short *) (entry+26)))+(*((unsigned short *) (entry+20)) << 16))
 #define FAT_DIRENTRY_FILELENGTH(entry) \
-  (*((unsigned long *) (entry+28)))
+  (*((unsigned int *) (entry+28)))
 
 #define FAT_LONGDIR_ID(entry) \
   (*((unsigned char *) (entry)))

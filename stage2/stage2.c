@@ -521,7 +521,7 @@ restart:
 		  if (c == 'O')
 		    {
 		      grub_memmove (cur_entry + 2, cur_entry,
-				    ((int) heap) - ((int) cur_entry));
+				    heap - cur_entry);
 
 		      cur_entry[0] = ' ';
 		      cur_entry[1] = 0;
@@ -537,8 +537,8 @@ restart:
 					    0);
 
 		      grub_memmove (cur_entry, ptr,
-				    ((int) heap) - ((int) ptr));
-		      heap -= (((int) ptr) - ((int) cur_entry));
+				    heap - ptr);
+		      heap -= ptr - cur_entry;
 
 		      num_entries--;
 
@@ -688,7 +688,7 @@ restart:
 
 			  /* align rest of commands properly */
 			  grub_memmove (cur_entry + j, cur_entry + i,
-					(int) heap - ((int) cur_entry + i));
+					(unsigned long) heap - ((unsigned long) cur_entry + i));
 
 			  /* copy command to correct area */
 			  grub_memmove (cur_entry, new_heap, j);
@@ -781,7 +781,7 @@ restart:
 
 		  /* align rest of commands properly */
 		  memmove (start + j + needs_padding, start + i,
-		       ((int) append_line) - ((int) start) - (amount));
+		       ((unsigned long) append_line) - ((unsigned long) start) - (amount));
 
 		  if (needs_padding)
 		      *start = ' ';

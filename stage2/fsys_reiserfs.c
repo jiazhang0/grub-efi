@@ -341,19 +341,19 @@ struct fsys_reiser_info
 /* The cached s+tree blocks in FSYS_BUF,  see below
  * for a more detailed description.
  */
-#define ROOT     ((char *) ((int) FSYS_BUF))
+#define ROOT     ((char *) ((unsigned long) FSYS_BUF))
 #define CACHE(i) (ROOT + ((i) << INFO->fullblocksize_shift))
 #define LEAF     CACHE (DISK_LEAF_NODE_LEVEL)
 
 #define BLOCKHEAD(cache) ((struct block_head *) cache)
-#define ITEMHEAD         ((struct item_head  *) ((int) LEAF + BLKH_SIZE))
-#define KEY(cache)       ((struct key        *) ((int) cache + BLKH_SIZE))
+#define ITEMHEAD         ((struct item_head  *) ((unsigned long) LEAF + BLKH_SIZE))
+#define KEY(cache)       ((struct key        *) ((unsigned long) cache + BLKH_SIZE))
 #define DC(cache)        ((struct disk_child *) \
-			  ((int) cache + BLKH_SIZE + KEY_SIZE * nr_item))
+			  ((unsigned long) cache + BLKH_SIZE + KEY_SIZE * nr_item))
 /* The fsys_reiser_info block.
  */
 #define INFO \
-    ((struct fsys_reiser_info *) ((int) FSYS_BUF + FSYSREISER_CACHE_SIZE))
+    ((struct fsys_reiser_info *) ((unsigned long) FSYS_BUF + FSYSREISER_CACHE_SIZE))
 /* 
  * The journal cache.  For each transaction it contains the number of
  * blocks followed by the real block numbers of this transaction.  
@@ -366,8 +366,8 @@ struct fsys_reiser_info
 #define JOURNAL_END      ((__u32 *) (FSYS_BUF + FSYS_BUFLEN))
 
 
-static __inline__ unsigned long
-grub_log2 (unsigned long word)
+static __inline__ unsigned int
+grub_log2 (unsigned int word)
 {
   __asm__ ("bsfl %1,%0"
 	   : "=r" (word)
@@ -594,7 +594,7 @@ reiserfs_mount (void)
 	{
 	  /* pre journaling super block ? */
 	  if (substring (REISERFS_SUPER_MAGIC_STRING, 
-			 (char*) ((int) &super + 20)) > 0)
+			 (char*) ((unsigned long) &super + 20)) > 0)
 	    return 0;
 	  
 	  super.s_blocksize = REISERFS_OLD_BLOCKSIZE;

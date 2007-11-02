@@ -1108,11 +1108,11 @@ displaymem_func (char *arg, int flags)
   if (mbi.flags & MB_INFO_MEM_MAP)
     {
       struct AddrRangeDesc *map = (struct AddrRangeDesc *) mbi.mmap_addr;
-      int end_addr = mbi.mmap_addr + mbi.mmap_length;
+      unsigned long end_addr = mbi.mmap_addr + mbi.mmap_length;
 
       grub_printf (" [Address Range Descriptor entries "
 		   "immediately follow (values are 64-bit)]\n");
-      while (end_addr > (int) map)
+      while (end_addr > (unsigned long) map)
 	{
 	  char *str;
 
@@ -1123,12 +1123,12 @@ displaymem_func (char *arg, int flags)
 	  grub_printf ("   %s:  Base Address:  0x%x X 4GB + 0x%x,\n"
 		       "      Length:   0x%x X 4GB + 0x%x bytes\n",
 		       str,
-		       (unsigned long) (map->BaseAddr >> 32),
-		       (unsigned long) (map->BaseAddr & 0xFFFFFFFF),
-		       (unsigned long) (map->Length >> 32),
-		       (unsigned long) (map->Length & 0xFFFFFFFF));
+		       (unsigned int) (map->BaseAddr >> 32),
+		       (unsigned int) (map->BaseAddr & 0xFFFFFFFF),
+		       (unsigned int) (map->Length >> 32),
+		       (unsigned int) (map->Length & 0xFFFFFFFF));
 
-	  map = ((struct AddrRangeDesc *) (((int) map) + 4 + map->size));
+	  map = ((struct AddrRangeDesc *) (((unsigned long) map) + 4 + map->size));
 	}
     }
 

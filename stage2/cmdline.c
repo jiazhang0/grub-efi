@@ -220,7 +220,7 @@ run_script (char *script, char *heap)
       while (*cur_entry++)
 	;
 
-      grub_memmove (heap, old_entry, (int) cur_entry - (int) old_entry);
+      grub_memmove (heap, old_entry, cur_entry - old_entry);
       if (! *heap)
 	{
 	  /* If there is no more command in SCRIPT...  */

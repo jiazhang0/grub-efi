@@ -246,7 +246,7 @@ Author: Martin Renters
 
 typedef struct
 {
-  unsigned long	s_addr;
+  unsigned int	s_addr;
 }
 in_addr;
 
@@ -302,7 +302,7 @@ struct bootp_t
   char bp_htype;
   char bp_hlen;
   char bp_hops;
-  unsigned long bp_xid;
+  unsigned int bp_xid;
   unsigned short bp_secs;
   unsigned short unused;
   in_addr bp_ciaddr;
@@ -411,25 +411,25 @@ struct rpc_t
     
     struct
     {
-      long id;
-      long type;
-      long rpcvers;
-      long prog;
-      long vers;
-      long proc;
-      long data[1];
+      int id;
+      int type;
+      int rpcvers;
+      int prog;
+      int vers;
+      int proc;
+      int data[1];
     }
     call;
     
     struct
     {
-      long id;
-      long type;
-      long rstatus;
-      long verifier;
-      long v2;
-      long astatus;
-      long data[1];
+      int id;
+      int type;
+      int rstatus;
+      int verifier;
+      int v2;
+      int astatus;
+      int data[1];
     }
     reply;
   }
@@ -531,9 +531,7 @@ extern int ip_abort;
 extern int network_ready;
 extern struct rom_info rom;
 extern struct arptable_t arptable[MAX_ARP];
-extern struct bootpd_t bootp_data;
 #define	BOOTP_DATA_ADDR	(&bootp_data)
-extern unsigned char *end_of_rfc1533;
 
 /* config.c */
 extern struct nic nic;

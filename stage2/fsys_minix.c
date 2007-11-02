@@ -138,11 +138,11 @@ struct minix_dir_entry {
 #define SUPERBLOCK \
     ((struct minix_super_block *)(FSYS_BUF))
 #define INODE \
-    ((struct minix_inode *)((int) SUPERBLOCK + BLOCK_SIZE))
+    ((struct minix_inode *)((unsigned long) SUPERBLOCK + BLOCK_SIZE))
 #define DATABLOCK1 \
-    ((int)((int)INODE + sizeof(struct minix_inode)))
+    ((unsigned long)INODE + sizeof(struct minix_inode))
 #define DATABLOCK2 \
-    ((int)((int)DATABLOCK1 + BLOCK_SIZE))
+    ((unsigned long)DATABLOCK1 + BLOCK_SIZE)
 
 /* linux/stat.h */
 #define S_IFMT  00170000
@@ -193,7 +193,7 @@ static int
 minix_rdfsb (int fsblock, int buffer)
 {
   return devread (fsblock * (BLOCK_SIZE / DEV_BSIZE), 0,
-		  BLOCK_SIZE, (char *) buffer);
+		  BLOCK_SIZE, (char *) (unsigned long) buffer);
 }
 
 /* Maps LOGICAL_BLOCK (the file offset divided by the blocksize) into
@@ -336,7 +336,7 @@ minix_dir (char *dirname)
 
       ino_blk = (2 + SUPERBLOCK->s_imap_blocks + SUPERBLOCK->s_zmap_blocks
 		 + (current_ino - 1) / MINIX_INODES_PER_BLOCK);
-      if (! minix_rdfsb (ino_blk, (int) INODE))
+      if (! minix_rdfsb (ino_blk, (unsigned long) INODE))
 	return 0;
 
       /* reset indirect blocks! */

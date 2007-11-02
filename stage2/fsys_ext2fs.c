@@ -251,13 +251,13 @@ struct ext2_dir_entry
     ((struct ext2_super_block *)(FSYS_BUF))
 #define GROUP_DESC \
     ((struct ext2_group_desc *) \
-     ((int)SUPERBLOCK + sizeof(struct ext2_super_block)))
+     ((unsigned long)SUPERBLOCK + sizeof(struct ext2_super_block)))
 #define INODE \
-    ((struct ext2_inode *)((int)GROUP_DESC + EXT2_BLOCK_SIZE(SUPERBLOCK)))
+    ((struct ext2_inode *)((unsigned long)GROUP_DESC + EXT2_BLOCK_SIZE(SUPERBLOCK)))
 #define DATABLOCK1 \
-    ((int)((int)INODE + sizeof(struct ext2_inode)))
+    ((unsigned long)INODE + sizeof(struct ext2_inode))
 #define DATABLOCK2 \
-    ((int)((int)DATABLOCK1 + EXT2_BLOCK_SIZE(SUPERBLOCK)))
+    ((unsigned long)DATABLOCK1 + EXT2_BLOCK_SIZE(SUPERBLOCK))
 
 /* linux/ext2_fs.h */
 #define EXT2_ADDR_PER_BLOCK(s)          (EXT2_BLOCK_SIZE(s) / sizeof (__u32))
@@ -287,8 +287,8 @@ struct ext2_dir_entry
  * ffz = Find First Zero in word. Undefined if no zero exists,
  * so code should check against ~0UL first..
  */
-static __inline__ unsigned long
-ffz (unsigned long word)
+static __inline__ unsigned int
+ffz (unsigned int word)
 {
   __asm__ ("bsfl %1,%0"
 :	   "=r" (word)
@@ -324,7 +324,7 @@ ext2_rdfsb (int fsblock, int buffer)
   printf ("fsblock %d buffer %d\n", fsblock, buffer);
 #endif /* E2DEBUG */
   return devread (fsblock * (EXT2_BLOCK_SIZE (SUPERBLOCK) / DEV_BSIZE), 0,
-		  EXT2_BLOCK_SIZE (SUPERBLOCK), (char *) buffer);
+		  EXT2_BLOCK_SIZE (SUPERBLOCK), (char *) (unsigned long) buffer);
 }
 
 /* from
@@ -594,7 +594,7 @@ ext2fs_dir (char *dirname)
 #endif /* E2DEBUG */
       if (!ext2_rdfsb (
 			(WHICH_SUPER + group_desc + SUPERBLOCK->s_first_data_block),
-			(int) GROUP_DESC))
+			(unsigned long) GROUP_DESC))
 	{
 	  return 0;
 	}
@@ -605,7 +605,7 @@ ext2fs_dir (char *dirname)
 #ifdef E2DEBUG
       printf ("inode table fsblock=%d\n", ino_blk);
 #endif /* E2DEBUG */
-      if (!ext2_rdfsb (ino_blk, (int) INODE))
+      if (!ext2_rdfsb (ino_blk, (unsigned long) INODE))
 	{
 	  return 0;
 	}

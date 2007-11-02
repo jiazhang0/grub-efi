@@ -53,9 +53,9 @@ int network_ready = 0;
 struct rom_info rom;
 
 static int vendorext_isvalid;
-static unsigned long netmask;
+static unsigned int netmask;
 static struct bootpd_t bootp_data;
-static unsigned long xid;
+static unsigned int xid;
 static unsigned char *end_of_rfc1533 = NULL;
 
 #ifndef	NO_DHCP_SUPPORT
@@ -773,7 +773,7 @@ await_reply (int type, int ival, void *ptr, int timeout)
 	  if (nic.packetlen >= ETH_HLEN + sizeof (struct arprequest)
 	      && ptype == ARP)
 	    {
-	      unsigned long tmp;
+	      unsigned int tmp;
 
 	      arpreply = (struct arprequest *) &nic.packet[ETH_HLEN];
 	      

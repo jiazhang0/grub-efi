@@ -172,8 +172,13 @@ grub_stage2 (void)
   void doit (void)
     {
       /* Make sure our stack lives in the simulated memory area. */
+#ifdef __x86_64
+      asm volatile ("movq %%rsp, %0\n\tmovq %1, %%rsp\n"
+		    : "=&r" (realstack) : "r" (simstack));
+#else
       asm volatile ("movl %%esp, %0\n\tmovl %1, %%esp\n"
 		    : "=&r" (realstack) : "r" (simstack));
+#endif
       
       /* Do a setjmp here for the stop command.  */
       if (! setjmp (env_for_exit))
@@ -190,7 +195,11 @@ grub_stage2 (void)
 	}
       
       /* Replace our stack before we use any local variables. */
+#ifdef __x86_64
+      asm volatile ("movq %0, %%rsp\n" : : "r" (realstack));
+#else
       asm volatile ("movl %0, %%esp\n" : : "r" (realstack));
+#endif
     }
 
   assert (grub_scratch_mem == 0);
@@ -1060,7 +1069,7 @@ biosdisk (int subfunc, int drive, struct geometry *geometry,
   }
 #endif
 
-  buf = (char *) (segment << 4);
+  buf = (char *) (unsigned long) (segment << 4);
 
   switch (subfunc)
     {

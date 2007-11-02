@@ -141,7 +141,7 @@ static int gzip_filepos;
 static int gzip_filemax;
 static int gzip_fsmax;
 static int saved_filepos;
-static unsigned long gzip_crc;
+static unsigned int gzip_crc;
 
 /* internal extra variables for use of inflate code */
 static int block_type;
@@ -253,7 +253,7 @@ bad_field (int len)
 
 typedef unsigned char uch;
 typedef unsigned short ush;
-typedef unsigned long ulg;
+typedef unsigned int ulg;
 
 /*
  *  Window Size
@@ -316,8 +316,8 @@ gunzip_test_header (void)
       return 0;
     }
 
-  gzip_crc = *((unsigned long *) buf);
-  gzip_fsmax = gzip_filemax = *((unsigned long *) (buf + 4));
+  gzip_crc = *((unsigned int *) buf);
+  gzip_fsmax = gzip_filemax = *((unsigned int *) (buf + 4));
 
   initialize_tables ();
 

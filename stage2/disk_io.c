@@ -128,8 +128,8 @@ struct geometry buf_geom;
 int filepos;
 int filemax;
 
-static inline unsigned long
-grub_log2 (unsigned long word)
+static inline unsigned int
+grub_log2 (unsigned int word)
 {
   asm volatile ("bsfl %1,%0"
 		: "=r" (word)

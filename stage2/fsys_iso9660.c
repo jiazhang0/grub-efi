@@ -56,8 +56,8 @@ struct iso_inode_info {
 #define NAME_BUF        ((unsigned char *)(FSYS_BUF + 8192))
 
 
-static inline unsigned long
-grub_log2 (unsigned long word)
+static inline unsigned int
+grub_log2 (unsigned int word)
 {
   asm volatile ("bsfl %1,%0"
 		:          "=r" (word)

@@ -114,7 +114,7 @@ mmap_avail_at (unsigned long bottom)
     {
       for (cont = 0, addr = mbi.mmap_addr;
 	   addr < mbi.mmap_addr + mbi.mmap_length;
-	   addr += *((unsigned long *) addr) + 4)
+	   addr += *((unsigned int *) addr) + 4)
 	{
 	  struct AddrRangeDesc *desc = (struct AddrRangeDesc *) addr;
 	  
@@ -183,11 +183,11 @@ init_bios_info (void)
       cont = get_mmap_entry ((void *) addr, cont);
 
       /* If the returned buffer's length is zero, quit. */
-      if (! *((unsigned long *) addr))
+      if (! *((unsigned int *) addr))
 	break;
 
-      mbi.mmap_length += *((unsigned long *) addr) + 4;
-      addr += *((unsigned long *) addr) + 4;
+      mbi.mmap_length += *((unsigned int *) addr) + 4;
+      addr += *((unsigned int *) addr) + 4;
     }
   while (cont);
 
@@ -207,7 +207,7 @@ init_bios_info (void)
       /* Find the maximum available address. Ignore any memory holes.  */
       for (max_addr = 0, addr = mbi.mmap_addr;
 	   addr < mbi.mmap_addr + mbi.mmap_length;
-	   addr += *((unsigned long *) addr) + 4)
+	   addr += *((unsigned int *) addr) + 4)
 	{
 	  struct AddrRangeDesc *desc = (struct AddrRangeDesc *) addr;
 	  

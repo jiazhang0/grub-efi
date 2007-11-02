@@ -109,7 +109,7 @@ le16 (xfs_uint16_t x)
 static inline xfs_uint32_t __attribute__((__const__))
 le32 (xfs_uint32_t x)
 {
-#if 0
+#if 1
         /* 386 doesn't have bswap.  */
 	__asm__("bswap %0" : "=r" (x) : "0" (x));
 #else

@@ -284,6 +284,7 @@ extern void *grub_scratch_mem;
 
 /* Codes for getchar. */
 #define ASCII_CHAR(x)   ((x) & 0xFF)
+#include <va_list.h>
 #if !defined(GRUB_UTIL) || !defined(HAVE_LIBCURSES)
 # define KEY_LEFT        0x4B00
 # define KEY_RIGHT       0x4D00
@@ -402,30 +403,30 @@ struct linux_kernel_header
   unsigned short root_dev;		/* Default root device number */
   unsigned short boot_flag;		/* 0xAA55 magic number */
   unsigned short jump;			/* Jump instruction */
-  unsigned long header;			/* Magic signature "HdrS" */
+  unsigned int header;			/* Magic signature "HdrS" */
   unsigned short version;		/* Boot protocol version supported */
-  unsigned long realmode_swtch;		/* Boot loader hook */
-  unsigned long start_sys;		/* Points to kernel version string */
+  unsigned int realmode_swtch;		/* Boot loader hook */
+  unsigned int start_sys;		/* Points to kernel version string */
   unsigned char type_of_loader;		/* Boot loader identifier */
   unsigned char loadflags;		/* Boot protocol option flags */
   unsigned short setup_move_size;	/* Move to high memory size */
-  unsigned long code32_start;		/* Boot loader hook */
-  unsigned long ramdisk_image;		/* initrd load address */
-  unsigned long ramdisk_size;		/* initrd size */
-  unsigned long bootsect_kludge;	/* obsolete */
+  unsigned int code32_start;		/* Boot loader hook */
+  unsigned int ramdisk_image;		/* initrd load address */
+  unsigned int ramdisk_size;		/* initrd size */
+  unsigned int bootsect_kludge;		/* obsolete */
   unsigned short heap_end_ptr;		/* Free memory after setup end */
   unsigned short pad1;			/* Unused */
   char *cmd_line_ptr;			/* Points to the kernel command line */
-  unsigned long initrd_addr_max;	/* The highest address of initrd */
+  unsigned int initrd_addr_max;		/* The highest address of initrd */
 } __attribute__ ((packed));
 
 /* Memory map address range descriptor used by GET_MMAP_ENTRY. */
 struct mmar_desc
 {
-  unsigned long desc_len;	/* Size of this descriptor. */
+  unsigned int desc_len;	/* Size of this descriptor. */
   unsigned long long addr;	/* Base address. */
   unsigned long long length;	/* Length in bytes. */
-  unsigned long type;		/* Type of address range. */
+  unsigned int type;		/* Type of address range. */
 } __attribute__ ((packed));
 
 /* VBE controller information.  */
@@ -874,6 +875,7 @@ void print_cmdline_message (int type);
 #endif
 
 /* C library replacement functions with identical semantics. */
+int grub_vsprintf (char *str, const char *fmt, va_list args);
 void grub_printf (char *format,...);
 int grub_sprintf (char *buffer, const char *format, ...);
 int grub_tolower (int c);
@@ -890,7 +892,7 @@ int grub_strlen (const char *str);
 char *grub_strcpy (char *dest, const char *src);
 
 #ifndef GRUB_UTIL
-typedef unsigned long grub_jmp_buf[6];
+typedef unsigned long grub_jmp_buf[8];
 #else
 /* In the grub shell, use the libc jmp_buf instead.  */
 # include <setjmp.h>
@@ -913,7 +915,7 @@ extern grub_jmp_buf restart_cmdline_env;
 /* misc */
 void init_page (void);
 void print_error (void);
-char *convert_to_ascii (char *buf, int c, ...);
+char *convert_to_ascii (char *buf, int c, unsigned int num);
 int get_cmdline (char *prompt, char *cmdline, int maxlen,
 		 int echo_char, int history);
 int substring (const char *s1, const char *s2);

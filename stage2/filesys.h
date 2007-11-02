@@ -137,8 +137,8 @@ int iso9660_dir (char *dirname);
 #define BLK_CUR_BLKLIST      (*((int*)(FSYS_BUF+4)))
 #define BLK_CUR_BLKNUM       (*((int*)(FSYS_BUF+8)))
 #define BLK_MAX_ADDR         (FSYS_BUF+0x7FF9)
-#define BLK_BLKSTART(l)      (*((int*)l))
-#define BLK_BLKLENGTH(l)     (*((int*)(l+4)))
+#define BLK_BLKSTART(l)      (*((int*)(unsigned long)l))
+#define BLK_BLKLENGTH(l)     (*((int*)(unsigned long)(l+4)))
 #define BLK_BLKLIST_START    (FSYS_BUF+12)
 #define BLK_BLKLIST_INC_VAL  8
 #endif /* NO_BLOCK_FILES */

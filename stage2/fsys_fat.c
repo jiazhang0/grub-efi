@@ -54,8 +54,8 @@ struct fat_superblock
 
 #define FAT_CACHE_SIZE 2048
 
-static __inline__ unsigned long
-grub_log2 (unsigned long word)
+static __inline__ unsigned int
+grub_log2 (unsigned int word)
 {
   __asm__ ("bsfl %1,%0"
 	   : "=r" (word)
