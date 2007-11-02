@@ -3079,6 +3079,7 @@ parttype_func (char *arg, int flags)
   while (next_partition (current_drive, 0xFFFFFF, &part, &type,
 			 &start, &len, &offset, &entry,
 			 &ext_offset, &gpt_offset, &gpt_count, &gpt_size, mbr))
+    {
 	  /* The partition may not be a GPT partition.  */
 	  if (gpt_offset != 0)
 	    {
@@ -3086,7 +3087,6 @@ parttype_func (char *arg, int flags)
 		return 1;
 	    }
 
-    {
       if (part == current_partition)
 	{
 	  /* Found.  */

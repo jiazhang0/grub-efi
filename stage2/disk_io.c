@@ -526,6 +526,7 @@ set_partition_hidden_flag (int hidden)
   while (next_partition (current_drive, 0xFFFFFF, &part, &type,           
 			 &start, &len, &offset, &entry,
 			 &ext_offset, &gpt_offset, &gpt_count, &gpt_size, mbr))
+    {
 	  /* The partition may not be a GPT partition.  */
 	  if (gpt_offset != 0)
 	    {
@@ -533,7 +534,6 @@ set_partition_hidden_flag (int hidden)
 		return 1;
 	    }
 
-    {                                                                       
       if (part == current_partition)
 	{
 	  /* Found.  */
