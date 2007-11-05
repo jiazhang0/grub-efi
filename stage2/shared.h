@@ -1009,9 +1009,9 @@ void init_bios_info (void);
 #ifdef PLATFORM_EFI
 void grub_set_config_file (char *path_name);
 int grub_save_saved_default (int new_default);
+#endif
 int grub_load_linux (char *kernel, char *arg);
 int grub_load_initrd (char *initrd);
-#endif
 #endif /* ASM_FILE */
 
 #endif /* ! GRUB_SHARED_HEADER */
