@@ -1,13 +1,13 @@
 Name: grub
 Version: 0.97
-Release: 19
+Release: 20
 Summary: GRUB - the Grand Unified Boot Loader.
 Group: System Environment/Base
 License: GPLv2+
 
 ExclusiveArch: i386 x86_64
 BuildRequires: binutils >= 2.9.1.0.23, ncurses-devel, ncurses-static, texinfo
-BuildRequires: autoconf /usr/lib/crt1.o
+BuildRequires: autoconf /usr/lib/crt1.o automake
 PreReq: /sbin/install-info
 Requires: mktemp
 Requires: /usr/bin/cmp
@@ -16,7 +16,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-root
 
 URL: http://www.gnu.org/software/%{name}/
 Source0: ftp://alpha.gnu.org/gnu/%{name}/%{name}-%{version}.tar.gz
-Patch0: grub-fedora-8.patch
+Patch0: grub-fedora-9.patch
 
 %description
 GRUB (Grand Unified Boot Loader) is an experimental boot loader
@@ -26,24 +26,33 @@ systems.
 
 %prep
 %setup -q
-%patch -p1 -b .fedora-8
+%patch0 -p1 -b .fedora-9
 
 %build
+autoreconf
 autoconf
 GCCVERS=$(gcc --version | head -1 | cut -d\  -f3 | cut -d. -f1)
 CFLAGS="-Os -g -fno-strict-aliasing -Wall -Werror -Wno-shadow -Wno-unused"
 if [ "$GCCVERS" == "4" ]; then
 	CFLAGS="$CFLAGS -Wno-pointer-sign"
 fi
-%ifarch x86_64
-CFLAGS="$CFLAGS -static" 
-%endif
 export CFLAGS
+%ifarch x86_64
+%configure --sbindir=/sbin --disable-auto-linux-mem-opt --datarootdir=%{_datadir} --with-platform=efi
+make
+rm -fr $RPM_BUILD_ROOT
+%makeinstall sbindir=${RPM_BUILD_ROOT}/sbin
+mv ${RPM_BUILD_ROOT}/sbin/grub ${RPM_BUILD_ROOT}/sbin/grub-efi
+make clean
+autoreconf
+autoconf
+CFLAGS="$CFLAGS -static" 
+export CFLAGS
+%endif
 %configure --sbindir=/sbin --disable-auto-linux-mem-opt --datarootdir=%{_datadir}
 make
 
 %install
-rm -fr $RPM_BUILD_ROOT
 %makeinstall sbindir=${RPM_BUILD_ROOT}/sbin
 mkdir -p ${RPM_BUILD_ROOT}/boot/grub
 
@@ -77,8 +86,14 @@ fi
 %{_infodir}/multiboot*
 %{_mandir}/man*/*
 %{_datadir}/grub
+%ifarch x86_64
+%{_datadir}/grub/grub.efi
+%endif
 
 %changelog
+* Mon Nov 05 2007 Peter Jones <pjones@redhat.com> - 0.97-20
+- Add EFI support from Intel on x86_64
+
 * Thu Sep 20 2007 Peter Jones <pjones@redhat.com> - 0.97-19
 - Fix dmraid detection on Intel (isw) controllers in grub-install .
 
