@@ -87,7 +87,7 @@ fi
 %{_mandir}/man*/*
 %{_datadir}/grub
 %ifarch x86_64
-%{_datadir}/grub/grub.efi
+/sbin/grub-efi
 %endif
 
 %changelog
