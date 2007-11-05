@@ -40,14 +40,20 @@ unsigned short ascii_key_map[KEY_MAP_SIZE + 1];
 void
 grub_efi_init (void)
 {
+  /* First of all, initialize the console so that GRUB can display
+     messages.  */
+  grub_console_init ();
   /* Initialize the memory management system.  */
   grub_efi_mm_init ();
+  grub_efidisk_init ();
 }
 
 void
 grub_efi_fini (void)
 {
+  grub_efidisk_fini ();
   grub_efi_mm_fini ();
+  grub_console_fini ();
 }
 
 void *
@@ -336,4 +342,262 @@ int
 currticks (void)
 {
   return grub_get_rtc ();
+}
+
+static char *
+fix_path_name (char *path_name)
+{
+  char *p1, *p2;
+
+  p1 = path_name;
+  p2 = p1 + 1;
+  if (*p1 == '\\')
+    *p1 = '/';
+  while (*p1)
+    {
+      switch (*p2)
+	{
+	case '\0':
+	  *++p1 = *p2;
+	  break;
+	case '.':
+	  if (*p1 == '/' && *(p2+1) == '\\')
+	    p2 += 2;
+	  else
+	    *++p1=*p2++;
+	  break;
+	case '\\':
+	  if (*p1 == '/')
+	    p2++;
+	  else
+	    *++p1 = '/';
+	  break;
+	default:
+	  *++p1=*p2++;
+	  break;
+	}
+    }
+  return path_name;
+}
+
+char *
+grub_efi_file_path_to_path_name (grub_efi_device_path_t *file_path)
+{
+  char *str;
+  grub_efi_uint32_t str_len = 16;
+  grub_efi_uint32_t str_pos = 0;
+
+  str = grub_malloc (str_len);
+  if (! str)
+    return NULL;
+  str[0] = '\0';
+
+  while (1)
+    {
+      grub_efi_uint8_t type = GRUB_EFI_DEVICE_PATH_TYPE (file_path);
+      grub_efi_uint8_t subtype = GRUB_EFI_DEVICE_PATH_SUBTYPE (file_path);
+      grub_efi_uint16_t len = GRUB_EFI_DEVICE_PATH_LENGTH (file_path);
+
+      switch (type)
+	{
+	case GRUB_EFI_MEDIA_DEVICE_PATH_TYPE:
+	  switch (subtype)
+	    {
+	    case GRUB_EFI_FILE_PATH_DEVICE_PATH_SUBTYPE:
+	      {
+		grub_efi_file_path_device_path_t *fp;
+		grub_uint8_t buf[(len - 4) * 2 + 2];
+		grub_uint32_t path_name_len;
+		char *tmp_str;
+
+		fp = (grub_efi_file_path_device_path_t *) file_path;
+		*grub_utf16_to_utf8 (buf, fp->path_name,
+				     (len - 4) / sizeof (grub_efi_char16_t))
+		  = '\0';
+		path_name_len = strlen ((char *)buf) + 1;
+		if ((str_len - str_pos) <= path_name_len)
+		  {
+		    do
+		      str_len *= 2;
+		    while ((str_len - str_pos) <= path_name_len);
+		    tmp_str = grub_malloc (str_len);
+		    if (tmp_str == NULL)
+		      goto fail;
+		    grub_memmove (tmp_str, str, str_pos);
+		    grub_free (str);
+		    str = tmp_str;
+		  }
+		str[str_pos] = '\\';
+		strcpy (str + str_pos + 1, (char *)buf);
+		str_pos += path_name_len;
+	      }
+	      break;
+	    default:
+	      break;
+	    }
+	  break;
+	default:
+	  break;
+	}
+
+      if (GRUB_EFI_END_ENTIRE_DEVICE_PATH (file_path))
+	break;
+
+      file_path = (grub_efi_device_path_t *) ((char *) file_path + len);
+    }
+  return fix_path_name (str);
+
+ fail:
+  grub_free (str);
+  return NULL;
+}
+
+#define DEFAULT_SAVED_DEFAULT_FILE_NAME		"grub.default"
+#define DEFAULT_CONFIG_FILE_NAME		"grub.conf"
+
+static char saved_default_file[128] = "/boot/grub/grub.default";
+
+void
+grub_set_config_file (char *path_name)
+{
+  char *dir_end;
+  grub_uint32_t path_name_len;
+
+  path_name_len = strlen (path_name);
+  if (path_name_len > 4
+      && path_name[path_name_len - 4] == '.'
+      && grub_tolower (path_name[path_name_len - 3]) == 'e'
+      && grub_tolower (path_name[path_name_len - 2]) == 'f'
+      && grub_tolower (path_name[path_name_len - 1]) == 'i')
+    {
+      /* Bigger than buffer of config_file */
+      if (path_name_len + 1 > 127)
+	return;
+      grub_memmove (config_file, path_name, path_name_len - 4);
+      grub_strcpy (config_file + path_name_len - 4, ".conf");
+      /* Bigger than buffer of default file */
+      if (path_name_len + 4 > 127)
+	return;
+      grub_memmove (saved_default_file, path_name, path_name_len - 4);
+      grub_strcpy (saved_default_file + path_name_len - 4, ".default");
+      return;
+    }
+  dir_end = grub_strrchr (path_name, '/');
+  if (! dir_end)
+    {
+      grub_strcpy (config_file, DEFAULT_CONFIG_FILE_NAME);
+      grub_strcpy (saved_default_file, DEFAULT_SAVED_DEFAULT_FILE_NAME);
+      return;
+    }
+  path_name_len = dir_end + 1 - path_name;
+  if (path_name_len + sizeof (DEFAULT_CONFIG_FILE_NAME) > 128)
+    return;
+  grub_memmove (config_file, path_name, path_name_len);
+  grub_strcpy (config_file + path_name_len, DEFAULT_CONFIG_FILE_NAME);
+  if (path_name_len + sizeof (DEFAULT_SAVED_DEFAULT_FILE_NAME) > 128)
+    return;
+  path_name_len = dir_end + 1 - path_name;
+  grub_memmove (saved_default_file, path_name, path_name_len);
+  grub_strcpy (saved_default_file + path_name_len,
+	       DEFAULT_SAVED_DEFAULT_FILE_NAME);
+}
+
+static grub_efi_guid_t simple_file_system_guid = GRUB_EFI_SIMPLE_FILE_SYSTEM_GUID;
+
+static grub_efi_file_t *
+simple_open_file(grub_efi_handle_t dev_handle,
+		 char *file_name,
+		 int for_write)
+{
+  grub_efi_simple_file_system_t *file_system;
+  grub_efi_file_t *root;
+  grub_efi_file_t *file = NULL;
+  grub_efi_status_t status;
+  grub_efi_char16_t *file_name_w = NULL;
+  grub_efi_char16_t *chp_w;
+  grub_efi_uint64_t open_mode;
+
+  file_system = grub_efi_open_protocol (dev_handle,
+					&simple_file_system_guid,
+					GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+  if (! file_system)
+    return NULL;
+  status = Call_Service_2 (file_system->open_volume, file_system, &root);
+  if (status != GRUB_EFI_SUCCESS)
+    return NULL;
+  file_name_w = grub_malloc (2 * strlen(file_name) + 2);
+  if (! file_name_w)
+    goto done;
+  for (chp_w = file_name_w; *file_name; chp_w++, file_name++)
+    if (*file_name == '/')
+      *chp_w = '\\';
+    else
+      *chp_w = *file_name;
+  *chp_w = '\0';
+  open_mode = for_write ? GRUB_EFI_FILE_MODE_READ | GRUB_EFI_FILE_MODE_WRITE \
+    | GRUB_EFI_FILE_MODE_CREATE : GRUB_EFI_FILE_MODE_READ;
+  status = Call_Service_5 (root->open, root, &file, file_name_w,
+			   open_mode, 0);
+ done:
+  if (file_name_w)
+    grub_free (file_name_w);
+  Call_Service_1 (root->close, root);
+  return file;
+}
+
+void
+grub_load_saved_default (grub_efi_handle_t dev_handle)
+{
+  grub_efi_file_t *file;
+  char buf[16];
+  char *ptr = buf;
+  grub_efi_status_t status;
+  int val;
+  grub_efi_uintn_t buf_size = sizeof(buf);
+
+  file = simple_open_file (dev_handle, saved_default_file, 0);
+  if (! file)
+    return;
+  status = Call_Service_3 (file->read, file, &buf_size, buf);
+  if (status != GRUB_EFI_SUCCESS)
+    goto done;
+  if (buf_size >= sizeof(buf))
+    buf_size = sizeof(buf) - 1;
+  buf[buf_size] = '\0';
+  if (safe_parse_maxint (&ptr, &val))
+    saved_entryno = val;
+ done:
+  Call_Service_1 (file->close, file);
+}
+
+int
+grub_save_saved_default (int new_default)
+{
+  grub_efi_loaded_image_t *loaded_image;
+  grub_efi_file_t *file;
+  char buf[16];
+  grub_efi_status_t status;
+  grub_efi_uintn_t buf_size;
+  int ret = 0;
+
+  loaded_image = grub_efi_get_loaded_image (grub_efi_image_handle);
+  file = simple_open_file (loaded_image->device_handle,
+			   saved_default_file, 1);
+  if (! file)
+    {
+      errnum = ERR_FILE_NOT_FOUND;
+      return 1;
+    }
+  sprintf (buf, "%d", new_default);
+  buf_size = strlen (buf);
+  status = Call_Service_3 (file->write, file, &buf_size, buf);
+  if (status != GRUB_EFI_SUCCESS)
+    {
+      errnum = ERR_WRITE;
+      ret = 1;
+      goto done;
+    }
+ done:
+  Call_Service_1 (file->close, file);
+  return ret;
 }

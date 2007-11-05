@@ -28,4 +28,19 @@ void e820_map_from_efi_map (struct e820_entry *e820_map,
 			    grub_efi_uintn_t desc_size,
 			    grub_efi_uintn_t memory_map_size);
 
+/* Initialize the console system.  */
+void grub_console_init (void);
+/* Finish the console system.  */
+void grub_console_fini (void);
+
+void grub_efidisk_init (void);
+void grub_efidisk_fini (void);
+grub_efi_handle_t grub_efidisk_get_current_bdev_handle (void);
+int grub_get_drive_partition_from_bdev_handle (grub_efi_handle_t handle,
+					       unsigned long *drive,
+					       unsigned long *partition);
+
+char *grub_efi_file_path_to_path_name (grub_efi_device_path_t *file_path);
+void grub_load_saved_default (grub_efi_handle_t dev_handle);
+
 #endif /* ! GRUB_EFI_MISC_HEADER */

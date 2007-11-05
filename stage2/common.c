@@ -322,6 +322,9 @@ init_bios_info (void)
 
   /* Set cdrom drive.  */
   {
+#ifdef PLATFORM_EFI
+    cdrom_drive = 0x100;
+#else
     struct geometry geom;
     
     /* Get the geometry.  */
@@ -330,6 +333,7 @@ init_bios_info (void)
       cdrom_drive = GRUB_INVALID_DRIVE;
     else
       cdrom_drive = boot_drive;
+#endif
   }
   
   /* Start main routine here.  */

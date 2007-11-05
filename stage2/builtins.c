@@ -3635,8 +3635,7 @@ savedefault_func (char *arg, int flags)
 
   return savedefault_helper(current_entryno);
 #else /* defined(PLATFORM_EFI) */
-  errnum = ERR_UNRECOGNIZED;
-  return 1;
+  return grub_save_saved_default (current_entryno);
 #endif
 #else /* defined(GRUB_UTIL) */
   return savedefault_shell(arg, flags);

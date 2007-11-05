@@ -1006,6 +1006,10 @@ int check_password(char *entered, char* expected, password_t type);
 
 void init_bios_info (void);
 
+#ifdef PLATFORM_EFI
+void grub_set_config_file (char *path_name);
+int grub_save_saved_default (int new_default);
+#endif
 #endif /* ASM_FILE */
 
 #endif /* ! GRUB_SHARED_HEADER */

@@ -20,6 +20,7 @@
 
 #include <grub/efi/efi.h>
 #include <grub/efi/api.h>
+#include <grub/efi/misc.h>
 #include <grub/misc.h>
 
 #include <shared.h>
@@ -36,6 +37,21 @@ static void *low_stack, *real_stack;
 static void
 real_main (void)
 {
+  grub_efi_loaded_image_t *loaded_image;
+  char *path_name;
+
+  loaded_image = grub_efi_get_loaded_image (grub_efi_image_handle);
+  grub_get_drive_partition_from_bdev_handle (loaded_image->device_handle,
+					     &boot_drive,
+					     &install_partition);
+  path_name = grub_efi_file_path_to_path_name (loaded_image->file_path);
+  if (path_name)
+    {
+      grub_set_config_file (path_name);
+      grub_free (path_name);
+    }
+  grub_load_saved_default (loaded_image->device_handle);
+
   init_bios_info ();
 }
 
