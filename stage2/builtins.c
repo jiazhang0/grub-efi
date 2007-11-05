@@ -458,6 +458,10 @@ static struct builtin builtin_cat =
 static int
 chainloader_func (char *arg, int flags)
 {
+#ifdef PLATFORM_EFI
+  kernel_type = grub_chainloader(arg);
+  return kernel_type == KERNEL_TYPE_NONE;
+#else
   int force = 0;
   char *file = arg;
 
@@ -514,6 +518,7 @@ chainloader_func (char *arg, int flags)
   errnum = ERR_NONE;
   
   return 0;
+#endif
 }
 
 static struct builtin builtin_chainloader =

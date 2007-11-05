@@ -1395,3 +1395,9 @@ grub_load_initrd (char *initrd)
 {
   return 0;
 }
+
+int
+grub_chainloader (char *filename)
+{
+  return 0;
+}
