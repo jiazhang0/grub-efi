@@ -1383,3 +1383,15 @@ hercules_setcursor (int on)
 {
   return 1;
 }
+
+int
+grub_load_linux (char *kernel, char *arg)
+{
+  return 0;
+}
+
+int
+grub_load_initrd (char *initrd)
+{
+  return 0;
+}
