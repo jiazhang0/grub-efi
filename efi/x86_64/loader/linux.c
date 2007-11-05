@@ -437,7 +437,9 @@ big_linux_boot (void)
   params->efi_mem_desc_size = desc_size;
   params->efi_mem_desc_version = desc_version;
   params->efi_mmap = (grub_uint32_t) (unsigned long) mmap_buf;
+#if 0
   params->efi_mmap_hi = (grub_uint64_t) mmap_buf >> 32;
+#endif
   params->efi_mmap_size = mmap_size;
 
   /* Pass parameters.  */
@@ -490,7 +492,7 @@ grub_load_linux (char *kernel, char *arg)
   if (lh->boot_flag != grub_cpu_to_le16 (0xaa55))
     {
       errnum = ERR_EXEC_FORMAT;
-      grub_printf ("invalid magic number");
+      grub_printf ("invalid magic number: %x", lh->boot_flag);
       goto fail;
     }
 
@@ -564,9 +566,14 @@ grub_load_linux (char *kernel, char *arg)
   /* No MCA on EFI.  */
   params->rom_config_len = 0;
 
+#if 0
   params->efi_signature = GRUB_LINUX_EFI_SIGNATURE_X64;
   params->efi_system_table = (grub_uint32_t) (unsigned long) grub_efi_system_table;
   params->efi_system_table_hi = (grub_uint64_t) grub_efi_system_table >> 32;
+#else
+  grub_memcpy(&params->efi_signature, "EFIL", 4);
+  params->efi_system_table = (grub_uint32_t) (unsigned long) grub_efi_system_table;
+#endif
   /* The other EFI parameters are filled when booting.  */
 
   /* No EDD */

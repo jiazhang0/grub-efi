@@ -45,8 +45,13 @@
 #define GRUB_LINUX_SETUP_MOVE_SIZE	0x9100
 #define GRUB_LINUX_CL_MAGIC		0xA33F
 
+#if 0 
 #define GRUB_LINUX_EFI_SIGNATURE_X64	\
   ('4' << 24 | '6' << 16 | 'L' << 8 | 'E')
+#else
+#define GRUB_LINUX_EFI_SIGNATURE_X64	\
+  ('L' << 24 | 'I' << 16 | 'F' << 8 | 'E')
+#endif
 
 #ifndef ASM_FILE
 
@@ -156,16 +161,32 @@ struct linux_kernel_params
   grub_uint8_t hd1_drive_info[0x10];	/* 90 */
   grub_uint16_t rom_config_len;	/* a0 */
 
+#if 0
   grub_uint8_t padding6[0x1c0 - 0xa2];
 
   grub_uint32_t efi_signature;	/* 1c0 */
   grub_uint32_t efi_system_table;	/* 1c4 */
   grub_uint32_t efi_mem_desc_size;	/* 1c8 */
   grub_uint32_t efi_mem_desc_version;	/* 1cc */
-  grub_uint32_t efi_mmap;	/* 1d0 */
+  grub_uint32_t efi_mmap;      /* 1d0 */
   grub_uint32_t efi_mmap_size;	/* 1d4 */
   grub_uint32_t efi_system_table_hi;	/* 1d8 */
   grub_uint32_t efi_mmap_hi;	/* 1dc */
+#else
+  grub_uint8_t padding6[0x1b8 - 0xa2];
+
+  grub_uint32_t efi_system_table;	/* 1b8 */
+
+  grub_uint8_t padding6_1[0x1c0 - 0x1bc];
+
+  grub_uint32_t efi_signature;	/* 1c0 */
+  grub_uint32_t efi_mem_desc_size;	/* 1c4 */
+  grub_uint32_t efi_mem_desc_version;	/* 1c8 */
+  grub_uint32_t efi_mmap_size;	/* 1cc */
+  grub_uint32_t efi_mmap; /* 1d0 */
+
+  grub_uint8_t padding6_2[0x1e0 - 0x1d4]; /* 1d4 */
+#endif
 
   grub_uint32_t alt_mem;	/* 1e0 */
 
