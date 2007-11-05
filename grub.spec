@@ -1,6 +1,6 @@
 Name: grub
 Version: 0.97
-Release: 20.%{?dist}
+Release: 20%{?dist}
 Summary: GRUB - the Grand Unified Boot Loader.
 Group: System Environment/Base
 License: GPLv2+
