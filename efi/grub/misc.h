@@ -60,4 +60,7 @@ struct e820_entry
   grub_uint32_t type;    /* type of memory segment */
 } __attribute__ ((packed));
 
+int grub_load_linux (char *kernel, char *arg);
+int grub_load_initrd (char *initrd);
+
 #endif /* ! GRUB_MISC_HEADER */

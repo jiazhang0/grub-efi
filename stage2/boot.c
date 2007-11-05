@@ -31,8 +31,8 @@ static int cur_addr;
 entry_func entry_addr;
 #ifndef PLATFORM_EFI
 static struct mod_list mll[99];
-#endif
 static int linux_mem_size;
+#endif
 
 /*
  *  The next two functions, 'load_image' and 'load_module', are the building
@@ -44,6 +44,9 @@ kernel_t
 load_image (char *kernel, char *arg, kernel_t suggested_type,
 	    unsigned long load_flags)
 {
+#ifdef PLATFORM_EFI
+      return grub_load_linux (kernel, arg);
+#else
   int len, i, exec_type = 0, align_4k = 1;
   entry_func real_entry_addr = 0;
   kernel_t type = KERNEL_TYPE_NONE;
@@ -760,6 +763,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
     }
   
   return type;
+#endif
 }
 
 #ifndef PLATFORM_EFI
@@ -804,6 +808,12 @@ load_module (char *module, char *arg)
 int
 load_initrd (char *initrd)
 {
+#ifdef PLATFORM_EFI
+#ifndef NO_DECOMPRESSION
+  no_decompression = 1;
+#endif
+  return grub_load_initrd (initrd);
+#else
   int len;
   unsigned long moveto;
   unsigned long max_addr;
@@ -861,6 +871,7 @@ load_initrd (char *initrd)
 #endif
 
   return ! errnum;
+#endif
 }
 
 
