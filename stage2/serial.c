@@ -37,7 +37,7 @@ static int keep_track = 1;
 
 /* Hardware-dependent definitions.  */
 
-#ifndef GRUB_UTIL
+#if ! defined (GRUB_UTIL) && ! defined (PLATFORM_EFI)
 /* The structure for speed vs. divisor.  */
 struct divisor
 {
@@ -187,7 +187,7 @@ serial_hw_init (unsigned short port, unsigned int speed,
   
   return 1;
 }
-#endif /* ! GRUB_UTIL */
+#endif /* ! defined (GRUB_UTIL) && ! defined (PLATFORM_EFI) */
 
 
 /* Generic definitions.  */
