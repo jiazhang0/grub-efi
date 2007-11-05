@@ -284,7 +284,6 @@ extern void *grub_scratch_mem;
 
 /* Codes for getchar. */
 #define ASCII_CHAR(x)   ((x) & 0xFF)
-#include <va_list.h>
 #if !defined(GRUB_UTIL) || !defined(HAVE_LIBCURSES)
 # define KEY_LEFT        0x4B00
 # define KEY_RIGHT       0x4D00
@@ -381,6 +380,8 @@ extern void *grub_scratch_mem;
 /*
  *  Below this should be ONLY defines and other constructs for C code.
  */
+
+#include <stdarg.h>
 
 /* multiboot stuff */
 
