@@ -37,7 +37,7 @@ if NETBOOT_SUPPORT
 GRUBSO_LIBS += $(top_srcdir)/netboot/libdrivers.a
 endif
 
-pkglib_DATA = grub.efi
+pkgdata_DATA = grub.efi
 
 grub.efi: grub.so
 	$(OBJCOPY) -j .text -j .sdata -j .data -j .dynamic -j .dynsym -j .rel \
