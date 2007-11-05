@@ -25,9 +25,13 @@
 #include "imgact_aout.h"
 #include "i386-elf.h"
 
+#ifndef PLATFORM_EFI
 static int cur_addr;
+#endif
 entry_func entry_addr;
+#ifndef PLATFORM_EFI
 static struct mod_list mll[99];
+#endif
 static int linux_mem_size;
 
 /*
@@ -758,6 +762,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
   return type;
 }
 
+#ifndef PLATFORM_EFI
 int
 load_module (char *module, char *arg)
 {
@@ -794,6 +799,7 @@ load_module (char *module, char *arg)
   grub_close ();
   return 1;
 }
+#endif
 
 int
 load_initrd (char *initrd)
@@ -858,6 +864,7 @@ load_initrd (char *initrd)
 }
 
 
+#ifndef PLATFORM_EFI
 #ifdef GRUB_UTIL
 /* Dummy function to fake the *BSD boot.  */
 static void
@@ -1022,3 +1029,5 @@ bsd_boot (kernel_t type, int bootdev, char *arg)
 		     extended_memory, mbi.mem_lower);
     }
 }
+#endif
+

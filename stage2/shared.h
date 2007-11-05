@@ -35,7 +35,8 @@
 #endif
 
 /* Maybe redirect memory requests through grub_scratch_mem. */
-#ifdef GRUB_UTIL
+#if defined(GRUB_UTIL) || defined(PLATFORM_EFI)
+#define GRUB_SCRATCH_MEM_SIZE   0x400000
 extern void *grub_scratch_mem;
 # define RAW_ADDR(x) ((x) + (unsigned long) grub_scratch_mem)
 # define RAW_SEG(x) (RAW_ADDR ((x) << 4) >> 4)

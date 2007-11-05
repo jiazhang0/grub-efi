@@ -14,7 +14,11 @@ EXTRA_DIST = setjmp.S apm.S $(noinst_SCRIPTS)
 INCLUDES = -I$(top_srcdir)/stage1
 
 # The library for /sbin/grub.
+if PLATFORM_EFI
+noinst_LIBRARIES = libgrub.a libstage2.a
+else
 noinst_LIBRARIES = libgrub.a
+endif
 libgrub_a_SOURCES = boot.c builtins.c char_io.c cmdline.c common.c \
 	disk_io.c fsys_ext2fs.c fsys_fat.c fsys_ffs.c fsys_iso9660.c \
 	fsys_jfs.c fsys_minix.c fsys_reiserfs.c fsys_ufs2.c \
@@ -28,6 +32,8 @@ libgrub_a_CFLAGS = $(GRUB_CFLAGS) -I$(top_srcdir)/lib \
 
 # Stage 2 and Stage 1.5's.
 pkgdatadir = $(datadir)/$(PACKAGE)/$(host_cpu)-$(host_vendor)
+
+if !PLATFORM_EFI
 
 EXTRA_PROGRAMS = nbloader.exec pxeloader.exec diskless.exec
 
@@ -54,6 +60,8 @@ noinst_PROGRAMS = pre_stage2.exec start.exec start_eltorito.exec \
 	xfs_stage1_5.exec
 endif
 MOSTLYCLEANFILES = $(noinst_PROGRAMS)
+
+endif
 
 PRE_STAGE2_LINK = -nostdlib -Wl,-N -Wl,-Ttext -Wl,8200 $(LOADER_LDFLAGS)
 START_LINK = -nostdlib -Wl,-N -Wl,-Ttext -Wl,8000 $(LOADER_LDFLAGS)
@@ -87,6 +95,15 @@ endif
 
 STAGE2_COMPILE = $(STAGE2_CFLAGS) -fno-builtin -nostdinc \
 	$(NETBOOT_FLAGS) $(SERIAL_FLAGS) $(HERCULES_FLAGS) $(GRAPHICS_FLAGS)
+
+libstage2_a_SOURCES = boot.c builtins.c char_io.c cmdline.c common.c \
+	disk_io.c fsys_ext2fs.c fsys_fat.c fsys_ffs.c fsys_iso9660.c \
+	fsys_jfs.c fsys_minix.c fsys_reiserfs.c fsys_ufs2.c \
+	fsys_vstafs.c fsys_xfs.c gunzip.c md5.c serial.c stage2.c \
+	terminfo.c tparm.c
+libstage2_a_CFLAGS = $(STAGE2_COMPILE) $(FSYS_CFLAGS)
+
+if !PLATFORM_EFI
 
 STAGE1_5_LINK = -nostdlib -Wl,-N -Wl,-Ttext -Wl,2000 $(LOADER_LDFLAGS)
 STAGE1_5_COMPILE = $(STAGE2_COMPILE) -DNO_DECOMPRESSION=1 -DSTAGE1_5=1
@@ -277,3 +294,5 @@ pxegrub: pxeloader diskless
 SUFFIXES = .exec
 .exec:
 	$(OBJCOPY) -O binary $< $@
+
+endif

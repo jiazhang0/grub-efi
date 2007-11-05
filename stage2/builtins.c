@@ -295,11 +295,13 @@ boot_func (char *arg, int flags)
   
   switch (kernel_type)
     {
+#ifndef PLATFORM_EFI
     case KERNEL_TYPE_FREEBSD:
     case KERNEL_TYPE_NETBSD:
       /* *BSD */
       bsd_boot (kernel_type, bootdev, (char *) mbi.cmdline);
       break;
+#endif
 
     case KERNEL_TYPE_LINUX:
       /* Linux */
@@ -341,10 +343,12 @@ boot_func (char *arg, int flags)
       chain_stage1 (0, BOOTSEC_LOCATION, boot_part_addr);
       break;
 
+#ifndef PLATFORM_EFI
     case KERNEL_TYPE_MULTIBOOT:
       /* Multiboot */
       multi_boot ((int) entry_addr, (int) &mbi);
       break;
+#endif
 
     default:
       errnum = ERR_BOOT_COMMAND;
@@ -811,7 +815,7 @@ static struct builtin builtin_debug =
 };
 
 
-#if !defined(SUPPORT_DISKLESS) && !defined(GRUB_UTIL)
+#if !defined(SUPPORT_DISKLESS) && !defined(GRUB_UTIL) && !defined(PLATFORM_EFI)
 static int savedefault_helper(int);
 #endif
 /* default */
@@ -820,6 +824,7 @@ default_func (char *arg, int flags)
 {
 #ifndef SUPPORT_DISKLESS
 #ifndef GRUB_UTIL
+#ifndef PLATFORM_EFI
   /* Has a forced once-only default been specified? */
   if ((saved_entryno & STAGE2_ONCEONLY_ENTRY) != 0)
     {
@@ -829,6 +834,7 @@ default_func (char *arg, int flags)
       savedefault_helper(old_defaults & 0xff);
       return 0;
     }
+#endif
 #endif
   if (grub_strcmp (arg, "saved") == 0)
     {
@@ -1048,6 +1054,7 @@ static struct builtin builtin_clear =
   "Clear the screen"
 };
 
+#ifndef PLATFORM_EFI
 
 /* displayapm */
 static int
@@ -1089,6 +1096,7 @@ static struct builtin builtin_displayapm =
   "displayapm",
   "Display APM BIOS information."
 };
+#endif /* !PLATFORM_EFI */
 
 
 /* displaymem */
@@ -1205,6 +1213,7 @@ static struct builtin builtin_dump =
   };
 #endif /* GRUB_UTIL */
 
+#ifndef PLATFORM_EFI
 
 static char embed_info[32];
 /* embed */
@@ -1339,6 +1348,7 @@ static struct builtin builtin_embed =
   " is a drive, or in the \"bootloader\" area if DEVICE is a FFS partition."
   " Print the number of sectors which STAGE1_5 occupies if successful."
 };
+#endif /* ! PLATFORM_EFI */
 
 
 /* fallback */
@@ -1876,6 +1886,7 @@ static struct builtin builtin_ifconfig =
 };
 #endif /* SUPPORT_NETBOOT */
 
+#ifndef PLATFORM_EFI
 
 /* impsprobe */
 static int
@@ -1903,6 +1914,7 @@ static struct builtin builtin_impsprobe =
   " configuration table and boot the various CPUs which are found into"
   " a tight loop."
 };
+#endif /* ! PLATFORM_EFI */
 
 
 /* initrd */
@@ -1935,6 +1947,7 @@ static struct builtin builtin_initrd =
   " appropriate parameters in the Linux setup area in memory."
 };
 
+#ifndef PLATFORM_EFI
 
 /* install */
 static struct {
@@ -2547,6 +2560,7 @@ static struct builtin builtin_ioprobe =
   "ioprobe DRIVE",
   "Probe I/O ports used for the drive DRIVE."
 };
+#endif /* ! PLATFORM_EFI */
 
 
 /* kernel */
@@ -2681,6 +2695,7 @@ static struct builtin builtin_makeactive =
   " This command is limited to _primary_ PC partitions on a hard disk."
 };
 
+#ifndef PLATFORM_EFI
 
 /* map */
 /* Map FROM_DRIVE to TO_DRIVE.  */
@@ -2744,6 +2759,7 @@ static struct builtin builtin_map =
   " when you chain-load some operating systems, such as DOS, if such an"
   " OS resides at a non-first drive."
 };
+#endif /* ! PLATFORM_EFI */
 
 
 #ifdef USE_MD5_PASSWORDS
@@ -2804,6 +2820,7 @@ static struct builtin builtin_md5crypt =
 };
 #endif /* USE_MD5_PASSWORDS */
 
+#ifndef PLATFORM_EFI
 
 /* module */
 static int
@@ -2881,6 +2898,7 @@ static struct builtin builtin_modulenounzip =
   "The same as `module', except that automatic decompression is"
   " disabled."
 };
+#endif /* !PLATFORM_EFI */
 
 
 /* pager [on|off] */
@@ -3214,8 +3232,8 @@ static struct builtin builtin_pause =
   "Print MESSAGE, then wait until a key is pressed."
 };
 
+#if defined (GRUB_UTIL) || defined (PLATFORM_EFI)
 
-#ifdef GRUB_UTIL
 /* quit */
 static int
 quit_func (char *arg, int flags)
@@ -3234,7 +3252,7 @@ static struct builtin builtin_quit =
   "quit",
   "Exit from the GRUB shell."
 };
-#endif /* GRUB_UTIL */
+#endif /* defined (GRUB_UTIL) || defined (PLATFORM_EFI) */
 
 
 #ifdef SUPPORT_NETBOOT
@@ -3450,7 +3468,7 @@ static struct builtin builtin_rootnoverify =
 
 
 
-#if !defined(SUPPORT_DISKLESS) && !defined(GRUB_UTIL)
+#if !defined(SUPPORT_DISKLESS) && !defined(GRUB_UTIL) && !defined(PLATFORM_EFI)
 /* Write specified default entry number into stage2 file. */
 static int
 savedefault_helper(int new_default)
@@ -3606,6 +3624,7 @@ savedefault_func (char *arg, int flags)
 {
 #if !defined(SUPPORT_DISKLESS)
 #if !defined(GRUB_UTIL)
+#if !defined(PLATFORM_EFI)
   /* This command is only useful when you boot an entry from the menu
      interface.  */
   if (! (flags & BUILTIN_SCRIPT))
@@ -3615,6 +3634,10 @@ savedefault_func (char *arg, int flags)
     }
 
   return savedefault_helper(current_entryno);
+#else /* defined(PLATFORM_EFI) */
+  errnum = ERR_UNRECOGNIZED;
+  return 1;
+#endif
 #else /* defined(GRUB_UTIL) */
   return savedefault_shell(arg, flags);
 #endif
@@ -3792,6 +3815,7 @@ static struct builtin builtin_serial =
 };
 #endif /* SUPPORT_SERIAL */
 
+#ifndef PLATFORM_EFI
 
 /* setkey */
 struct keysym
@@ -4035,6 +4059,7 @@ static struct builtin builtin_setkey =
   " is a digit), and delete. If no argument is specified, reset key"
   " mappings."
 };
+
 
 /* setup */
 static int
@@ -4344,6 +4369,7 @@ static struct builtin builtin_setup =
   " partition where GRUB images reside, specify the option `--stage2'"
   " to tell GRUB the file name under your OS."
 };
+#endif /* ! PLATFORM_EFI */
 
 
 #if defined(SUPPORT_SERIAL) || defined(SUPPORT_HERCULES) || defined(SUPPORT_GRAPHICS)
@@ -4727,6 +4753,7 @@ static struct builtin builtin_testload =
   " step is to try loading a kernel."
 };
 
+#ifndef PLATFORM_EFI
 
 /* testvbe MODE */
 static int
@@ -4831,6 +4858,7 @@ static struct builtin builtin_testvbe =
   "testvbe MODE",
   "Test the VBE mode MODE. Hit any key to return."
 };
+#endif /* !PLATFORM_EFI */
 
 
 #ifdef SUPPORT_NETBOOT
@@ -4935,6 +4963,7 @@ static struct builtin builtin_unhide =
   " partition type code."
 };
 
+#ifndef PLATFORM_EFI
 
 /* uppermem */
 static int
@@ -5064,6 +5093,7 @@ static struct builtin builtin_vbeprobe =
   "Probe VBE information. If the mode number MODE is specified, show only"
   " the information about only the mode."
 };
+#endif /* ! PLATFORM_EFI */
   
 
 /* The table of builtin commands. Sorted in dictionary order.  */
@@ -5091,12 +5121,16 @@ struct builtin *builtin_table[] =
 #ifdef SUPPORT_NETBOOT
   &builtin_dhcp,
 #endif /* SUPPORT_NETBOOT */
+#ifndef PLATFORM_EFI
   &builtin_displayapm,
+#endif
   &builtin_displaymem,
 #ifdef GRUB_UTIL
   &builtin_dump,
 #endif /* GRUB_UTIL */
+#ifndef PLATFORM_EFI
   &builtin_embed,
+#endif
   &builtin_fallback,
   &builtin_find,
 #ifdef SUPPORT_GRAPHICS
@@ -5111,27 +5145,35 @@ struct builtin *builtin_table[] =
 #ifdef SUPPORT_NETBOOT
   &builtin_ifconfig,
 #endif /* SUPPORT_NETBOOT */
+#ifndef PLATFORM_EFI
   &builtin_impsprobe,
+#endif
   &builtin_initrd,
+#ifndef PLATFORM_EFI
   &builtin_install,
   &builtin_ioprobe,
+#endif
   &builtin_kernel,
   &builtin_lock,
   &builtin_makeactive,
+#ifndef PLATFORM_EFI
   &builtin_map,
+#endif
 #ifdef USE_MD5_PASSWORDS
   &builtin_md5crypt,
 #endif /* USE_MD5_PASSWORDS */
+#ifndef PLATFORM_EFI
   &builtin_module,
   &builtin_modulenounzip,
+#endif
   &builtin_pager,
   &builtin_partnew,
   &builtin_parttype,
   &builtin_password,
   &builtin_pause,
-#ifdef GRUB_UTIL
+#if defined(GRUB_UTIL) || defined(PLATFORM_EFI)
   &builtin_quit,
-#endif /* GRUB_UTIL */
+#endif /* defined(GRUB_UTIL) || defined(PLATFORM_EFI) */
 #ifdef SUPPORT_NETBOOT
   &builtin_rarp,
 #endif /* SUPPORT_NETBOOT */
@@ -5143,8 +5185,10 @@ struct builtin *builtin_table[] =
 #ifdef SUPPORT_SERIAL
   &builtin_serial,
 #endif /* SUPPORT_SERIAL */
+#ifndef PLATFORM_EFI
   &builtin_setkey,
   &builtin_setup,
+#endif
 #ifdef SUPPORT_GRAPHICS
   &builtin_splashimage,
 #endif /* SUPPORT_GRAPHICS */
@@ -5155,14 +5199,18 @@ struct builtin *builtin_table[] =
   &builtin_terminfo,
 #endif /* SUPPORT_SERIAL */
   &builtin_testload,
+#ifndef PLATFORM_EFI
   &builtin_testvbe,
+#endif
 #ifdef SUPPORT_NETBOOT
   &builtin_tftpserver,
 #endif /* SUPPORT_NETBOOT */
   &builtin_timeout,
   &builtin_title,
   &builtin_unhide,
+#ifndef PLATFORM_EFI
   &builtin_uppermem,
   &builtin_vbeprobe,
+#endif
   0
 };

@@ -169,7 +169,14 @@ linalloc (int size)
 static void
 reset_linalloc (void)
 {
+#ifdef PLATFORM_EFI
+  unsigned int top = (mbi.mem_upper << 10) + 0x100000;
+  if (top > GRUB_SCRATCH_MEM_SIZE)
+    top = GRUB_SCRATCH_MEM_SIZE;
+  linalloc_topaddr = RAW_ADDR (top);
+#else
   linalloc_topaddr = RAW_ADDR ((mbi.mem_upper << 10) + 0x100000);
+#endif
 }
 
 

@@ -29,6 +29,46 @@ esac
 AC_SUBST(host_cpu)
 AC_SUBST(host_vendor)
 
+# Specify the platform (such as firmware).
+AC_ARG_WITH([platform],
+            AS_HELP_STRING([--with-platform=PLATFORM],
+                           [select the host platform [[guessed]]]))
+
+# Guess the platform if not specified.
+if test "x$with_platform" = x; then
+  case "$host_cpu"-"$host_vendor" in
+    i386-*) platform=pc ;;
+    x86_64-*) platform=pc ;;
+    *) AC_MSG_ERROR([unsupported machine type $host_cpu-$host_vendor]) ;;
+  esac
+else
+  platform="$with_platform"
+fi
+
+# Sanity check.
+case "$host_cpu"-"$platform" in
+  i386-pc) ;;
+  x86_64-pc) ;;
+  x86_64-efi) ;;
+  *) AC_MSG_ERROR([unsupported machine type "$host_cpu"-"$platform"]) ;;
+esac
+
+if test "x$platform" = xefi; then
+  case "$host_cpu" in
+    i386) EFI_ARCH=ia32 ;;
+    x86_64) EFI_ARCH=x86_64 ;;
+  *) AC_MSG_ERROR([unsupported machine type "$host_cpu"]) ;;
+  esac
+  AC_SUBST(EFI_ARCH)
+fi
+
+AC_SUBST(platform)
+AM_CONDITIONAL(PLATFORM_EFI, test "x$platform" = xefi)
+
+if test "x$platform" = xefi; then
+   AC_DEFINE(PLATFORM_EFI, 1, [Define if you run on EFI platform.])
+fi
+
 #
 # Options
 #
@@ -46,7 +86,7 @@ if test "x$CFLAGS" = x; then
   default_CFLAGS=yes
 fi
 
-if test "x$host_cpu" = xx86_64; then
+if test "x$platform" = xpc -a "x$host_cpu" = xx86_64; then
   CFLAGS="-m32 $CFLAGS"
 fi
 
@@ -121,6 +161,13 @@ STAGE2_CFLAGS="$STAGE2_CFLAGS -isystem `$CC -print-file-name=include`"
 LOADER_LDFLAGS="-Wl,--build-id=none"
 AC_SUBST(LOADER_LDFLAGS)
 
+if test "x$platform" = xefi; then
+  STAGE2_CFLAGS="$STAGE2_CFLAGS -fpic -fshort-wchar -fno-strict-aliasing -fno-merge-constants"
+  if test "x$EFI_ARCH" = xx86_64; then
+     STAGE2_CFLAGS="$STAGE2_CFLAGS -DEFI_FUNCTION_WRAPPER"
+  fi
+fi
+
 AC_SUBST(STAGE1_CFLAGS)
 AC_SUBST(STAGE2_CFLAGS)
 AC_SUBST(GRUB_CFLAGS)
@@ -165,9 +212,12 @@ fi
 
 # Defined in acinclude.m4.
 grub_ASM_USCORE
-grub_PROG_OBJCOPY_ABSOLUTE
-if test "x$grub_cv_prog_objcopy_absolute" != xyes; then
-  AC_MSG_ERROR([GRUB requires a working absolute objcopy; upgrade your binutils])
+
+if test "x$platform" != xefi; then
+  grub_PROG_OBJCOPY_ABSOLUTE
+  if test "x$grub_cv_prog_objcopy_absolute" != xyes; then
+    AC_MSG_ERROR([GRUB requires a working absolute objcopy; upgrade your binutils])
+  fi
 fi
 
 grub_ASM_PREFIX_REQUIREMENT
@@ -673,6 +723,10 @@ AC_SUBST(CCASFLAGS)
 
 
 dnl Output.
+if test "x$platform" = xefi; then
+  AC_CONFIG_FILES([efi/Makefile])
+  AC_CONFIG_LINKS([efi/grub/cpu:efi/grub/$host_cpu])
+fi
 AC_CONFIG_FILES([Makefile stage1/Makefile stage2/Makefile \
 		 docs/Makefile lib/Makefile util/Makefile \
 		 grub/Makefile netboot/Makefile util/grub-image \
