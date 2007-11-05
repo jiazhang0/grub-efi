@@ -1251,6 +1251,9 @@ memcheck (int addr, int len)
     return ! errnum;
 #endif /* GRUB_UTIL */
 
+#ifdef PLATFORM_EFI
+  return 1;
+#else
   if ((addr < RAW_ADDR (0x1000))
       || (addr < RAW_ADDR (0x100000)
 	  && RAW_ADDR (mbi.mem_lower * 1024) < (addr + len))
@@ -1259,6 +1262,7 @@ memcheck (int addr, int len)
     errnum = ERR_WONT_FIT;
 
   return ! errnum;
+#endif
 }
 
 void

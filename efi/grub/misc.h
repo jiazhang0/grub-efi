@@ -44,6 +44,8 @@ grub_uint8_t *grub_utf16_to_utf8 (grub_uint8_t * dest,
 void *grub_malloc (grub_size_t size);
 void grub_free (void *ptr);
 
+int safe_parse_maxulong (char **str_ptr, unsigned long *myulong_ptr);
+
 #define E820_RAM        1
 #define E820_RESERVED   2
 #define E820_ACPI       3
