@@ -161,50 +161,65 @@ struct linux_kernel_params
   grub_uint8_t hd1_drive_info[0x10];	/* 90 */
   grub_uint16_t rom_config_len;	/* a0 */
 
-#if 0
-  grub_uint8_t padding6[0x1c0 - 0xa2];
-
-  grub_uint32_t efi_signature;	/* 1c0 */
-  grub_uint32_t efi_system_table;	/* 1c4 */
-  grub_uint32_t efi_mem_desc_size;	/* 1c8 */
-  grub_uint32_t efi_mem_desc_version;	/* 1cc */
-  grub_uint32_t efi_mmap;      /* 1d0 */
-  grub_uint32_t efi_mmap_size;	/* 1d4 */
-  grub_uint32_t efi_system_table_hi;	/* 1d8 */
-  grub_uint32_t efi_mmap_hi;	/* 1dc */
-#else
   grub_uint8_t padding6[0x1b8 - 0xa2];
 
-  grub_uint32_t efi_system_table;	/* 1b8 */
+  union {
+    struct {
+      grub_uint32_t padding7_1; /* 0x1b8 */
+      grub_uint32_t padding7_2; /* 0x1bc */
 
-  grub_uint8_t padding6_1[0x1c0 - 0x1bc];
+      grub_uint32_t efi_signature;	/* 1c0 */
+      grub_uint32_t efi_system_table;	/* 1c4 */
+      grub_uint32_t efi_mem_desc_size;	/* 1c8 */
+      grub_uint32_t efi_mem_desc_version;	/* 1cc */
+      grub_uint32_t efi_mmap;      /* 1d0 */
+      grub_uint32_t efi_mmap_size;	/* 1d4 */
+      grub_uint32_t efi_system_table_hi;	/* 1d8 */
+      grub_uint32_t efi_mmap_hi;	/* 1dc */
+    } dunno;
+    struct {
+      grub_uint32_t efi_system_table;	/* 1b8 */
 
-  grub_uint32_t efi_signature;	/* 1c0 */
-  grub_uint32_t efi_mem_desc_size;	/* 1c4 */
-  grub_uint32_t efi_mem_desc_version;	/* 1c8 */
-  grub_uint32_t efi_mmap_size;	/* 1cc */
-  grub_uint32_t efi_mmap; /* 1d0 */
+      grub_uint32_t padding7_1; /* 0x1bc */
 
-  grub_uint8_t padding6_2[0x1e0 - 0x1d4]; /* 1d4 */
-#endif
+      grub_uint32_t efi_signature;	/* 1c0 */
+      grub_uint32_t efi_mem_desc_size;	/* 1c4 */
+      grub_uint32_t efi_mem_desc_version;	/* 1c8 */
+      grub_uint32_t efi_mmap_size;	/* 1cc */
+      grub_uint32_t efi_mmap; /* 1d0 */
+
+      grub_uint8_t padding7_2[0x1e0 - 0x1d4]; /* 1d4 */
+    } version_0204;
+    struct {
+      grub_uint32_t padding7_1; /* 0x1b8 */
+      grub_uint32_t padding7_2; /* 0x1bc */
+      grub_uint32_t padding7_3; /* 0x1c0 */
+      grub_uint32_t efi_system_table; /* 0x1c4 */
+      grub_uint32_t efi_mem_desc_size; /* 0x1c8 */
+      grub_uint32_t efi_mem_desc_version; /* 0x1cc */
+      grub_uint32_t efi_mmap; /* 0x1d0 */
+      grub_uint32_t efi_mmap_size; /* 0x1d4 */
+      grub_uint8_t padding7_4[0x1e0 - 0x1d8]; /* 0x1d8 */
+    } version_0206;
+  };
 
   grub_uint32_t alt_mem;	/* 1e0 */
 
-  grub_uint8_t padding7[0x1e8 - 0x1e4];	/* 1e4 */
+  grub_uint8_t padding8[0x1e8 - 0x1e4];	/* 1e4 */
 
   grub_uint8_t e820_nr_map;	/* 1e8 */
   grub_uint8_t eddbuf_entries;	/* 1e9 */
   grub_uint8_t edd_mbr_sig_buf_entries;	/* 1ea */
 
-  grub_uint8_t padding8[0x1f1 - 0x1eb];
+  grub_uint8_t padding9[0x1f1 - 0x1eb];
 
   struct grub_linux_kernel_header hdr;	/* 0x1f1 */
 
-  grub_uint8_t padding9[0x2d0-0x1f1-sizeof(struct grub_linux_kernel_header)];
+  grub_uint8_t padding10[0x2d0-0x1f1-sizeof(struct grub_linux_kernel_header)];
 
   grub_uint8_t e820_map[2560];	/* 0x2d0 */
 
-  grub_uint8_t padding10[0x1000 - 0xcd0];
+  grub_uint8_t padding11[0x1000 - 0xcd0];
 } __attribute__ ((packed));
 #endif /* ! ASM_FILE */
 

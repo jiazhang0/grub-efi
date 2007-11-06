@@ -352,6 +352,7 @@ set_video_params (struct linux_kernel_params *params)
       params->reserved_field_pos = 0;
       params->lfb_line_len = params->lfb_width / 2;
     }
+#if 0
   params->video_cursor_x = 0;
   params->video_cursor_y = 0;
   params->video_page = 0;
@@ -361,6 +362,17 @@ set_video_params (struct linux_kernel_params *params)
   params->video_height = 0;
   params->have_vga = 0x70;
   params->font_size = 0;
+#else
+  params->video_cursor_x = grub_efi_system_table->con_out->mode->cursor_column;
+  params->video_cursor_y = grub_efi_system_table->con_out->mode->cursor_row;
+  params->video_page = 0; /* ??? */
+  params->video_mode = grub_efi_system_table->con_out->mode->mode;
+  params->video_width = (grub_console_getwh () >> 8);
+  params->video_ega_bx = 0;
+  params->video_height = (grub_console_getwh () & 0xff);
+  params->have_vga = 0;
+  params->font_size = 16; /* XXX */
+#endif
   return;
 
  fallback:
@@ -407,6 +419,7 @@ void
 big_linux_boot (void)
 {
   struct linux_kernel_params *params;
+  struct grub_linux_kernel_header *lh;
   grub_efi_uintn_t mmap_size;
   grub_efi_uintn_t map_key;
   grub_efi_uintn_t desc_size;
@@ -433,14 +446,25 @@ big_linux_boot (void)
   /* Note that no boot services are available from here.  */
   memcpy ((void *) 0x700, switch_image, switch_size);
 
+  lh = &params->hdr;
   /* Pass EFI parameters.  */
-  params->efi_mem_desc_size = desc_size;
-  params->efi_mem_desc_version = desc_version;
-  params->efi_mmap = (grub_uint32_t) (unsigned long) mmap_buf;
-#if 0
-  params->efi_mmap_hi = (grub_uint64_t) mmap_buf >> 32;
-#endif
-  params->efi_mmap_size = mmap_size;
+  if (grub_le_to_cpu16 (lh->version) >= 0x0206) {
+    params->version_0206.efi_mem_desc_size = desc_size;
+    params->version_0206.efi_mem_desc_version = desc_version;
+    params->version_0206.efi_mmap = (grub_uint32_t) (unsigned long) mmap_buf;
+    params->version_0206.efi_mmap_size = mmap_size;
+  } else if (grub_le_to_cpu16 (lh->version) >= 0x0204) {
+    params->version_0204.efi_mem_desc_size = desc_size;
+    params->version_0204.efi_mem_desc_version = desc_version;
+    params->version_0204.efi_mmap = (grub_uint32_t) (unsigned long) mmap_buf;
+    params->version_0204.efi_mmap_size = mmap_size;
+  } else /* dunno */ {
+    params->dunno.efi_mem_desc_size = desc_size;
+    params->dunno.efi_mem_desc_version = desc_version;
+    params->dunno.efi_mmap = (grub_uint32_t) (unsigned long) mmap_buf;
+    params->dunno.efi_mmap_size = mmap_size;
+    params->dunno.efi_mmap_hi = (grub_uint64_t) mmap_buf >> 32;
+  }
 
   /* Pass parameters.  */
   asm volatile ("mov %0, %%rsi" : : "m" (real_mode_mem));
@@ -566,14 +590,19 @@ grub_load_linux (char *kernel, char *arg)
   /* No MCA on EFI.  */
   params->rom_config_len = 0;
 
-#if 0
-  params->efi_signature = GRUB_LINUX_EFI_SIGNATURE_X64;
-  params->efi_system_table = (grub_uint32_t) (unsigned long) grub_efi_system_table;
-  params->efi_system_table_hi = (grub_uint64_t) grub_efi_system_table >> 32;
-#else
-  grub_memcpy(&params->efi_signature, "EFIL", 4);
-  params->efi_system_table = (grub_uint32_t) (unsigned long) grub_efi_system_table;
-#endif
+  if (grub_le_to_cpu16 (lh->version) >= 0x0206) {
+    params->version_0206.efi_system_table = \
+                        (grub_uint32_t) (unsigned long) grub_efi_system_table;
+  } else if (grub_le_to_cpu16 (lh->version) >= 0x0204) {
+    grub_memcpy(&params->version_0204.efi_signature, "EFIL", 4);
+    params->version_0204.efi_system_table = \
+                        (grub_uint32_t) (unsigned long) grub_efi_system_table;
+  } else /* dunno */ {
+    params->dunno.efi_signature = GRUB_LINUX_EFI_SIGNATURE_X64;
+    params->dunno.efi_system_table = \
+                        (grub_uint32_t) (unsigned long) grub_efi_system_table;
+    params->dunno.efi_system_table_hi = (grub_uint64_t) grub_efi_system_table >> 32;
+  }
   /* The other EFI parameters are filled when booting.  */
 
   /* No EDD */
