@@ -83,12 +83,11 @@ typedef grub_uint32_t	grub_target_size_t;
 typedef grub_int32_t	grub_target_ssize_t;
 #endif
 
+typedef unsigned long   grub_addr_t;
 #if GRUB_CPU_SIZEOF_VOID_P == 8
-typedef grub_uint64_t	grub_addr_t;
 typedef grub_uint64_t	grub_size_t;
 typedef grub_int64_t	grub_ssize_t;
 #else
-typedef grub_uint32_t	grub_addr_t;
 typedef grub_uint32_t	grub_size_t;
 typedef grub_int32_t	grub_ssize_t;
 #endif
