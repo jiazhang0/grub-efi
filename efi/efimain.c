@@ -80,20 +80,29 @@ efi_main (grub_efi_handle_t image_handle, grub_efi_system_table_t *sys_tab)
 	  return GRUB_EFI_OUT_OF_RESOURCES;
 	}
 
+#ifdef __x86_64__
       asm volatile ("movq %%rsp, %0\n\tmovq %1, %%rsp\n"
 		    : "=&r" (real_stack) : "r" (low_stack+LOW_STACK_SIZE));
+#else
+      asm volatile ("movl %%esp, %0\n\tmovl %1, %%esp\n"
+		    : "=&r" (real_stack) : "r" (low_stack+LOW_STACK_SIZE));
+#endif
     }
 
   real_main ();
 
   if (real_stack) {
+#ifdef __x86_64__
     asm volatile ("movq %0, %%rsp\n" : : "r" (real_stack));
+#else
+    asm volatile ("movl %0, %%esp\n" : : "r" (real_stack));
+#endif
 
-    grub_efi_free_pages ((grub_efi_physical_address_t) low_stack,
+    grub_efi_free_pages ((grub_efi_physical_address_t)(unsigned long) low_stack,
 			 LOW_STACK_PAGES);
   }
 
-  grub_efi_free_pages ((grub_efi_physical_address_t) grub_scratch_mem,
+  grub_efi_free_pages ((grub_efi_physical_address_t)(unsigned long)grub_scratch_mem,
 		       GRUB_SCRATCH_MEM_PAGES);
   grub_efi_fini ();
 
