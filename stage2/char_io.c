@@ -175,80 +175,199 @@ grub_putstr (const char *str)
     grub_putchar (*str++);
 }
 
+static void write_char(char **str, char c, int *count)
+{
+    if (str && *str)
+        *(*str)++ = c;
+    else
+        putchar(c);
+    (*count)++;
+}
+
+static void write_str(char **str, char *s, int *count)
+{
+    if (s) {
+        while (*s)
+            write_char(str, *s++, count);
+    } else {
+        write_str(str, "(nil)", count);
+    }
+}
+
+#define format_ascii(buf, val, is_hex, is_cap) ({                   \
+        int _n = sizeof ((buf)) - 2;                                \
+        typeof(val) _nval = (val);                                  \
+        int _negative = 0;                                          \
+        int _mult = is_hex ? 16 : 10;                               \
+        char _a = is_cap ? 'A' : 'a';                               \
+        memset((buf), '\0', sizeof ((buf)));                        \
+        if (!(_nval > 0LL))                                         \
+            _negative = 1;                                          \
+        if (_nval == 0LL)                                           \
+            _negative = 0;                                          \
+        if (_negative)                                              \
+            _nval = (_nval ^ -1);                                   \
+        do {                                                        \
+            int _dig = _nval % _mult;                               \
+            (buf)[_n--] = ((_dig > 9) ? _dig + _a - 10 : '0'+_dig); \
+        } while (_nval /= _mult);                                   \
+        if (_negative)                                              \
+            (buf)[_n--] = '-';                                      \
+        _mult = 0;                                                  \
+        _n++;                                                       \
+        while (_n < sizeof ((buf)))                                 \
+            (buf)[_mult++] = (buf)[_n++];                           \
+        if (_negative && _mult > 1)                                 \
+            ((buf)[_mult-2])++;                                     \
+    })
+
 int
 grub_vsprintf (char *str, const char *fmt, va_list args)
 {
-  char c;
-  int count = 0;
-  auto void write_char (unsigned char ch);
-  auto void write_str (const char *s);
-  
-  void write_char (unsigned char ch)
-    {
-      if (str)
-	*str++ = ch;
-      else
-	grub_putchar (ch);
+    char c;
+    char buf[40];
+    int pos = 0;
 
-      count++;
-    }
+    int count = 0;
 
-  void write_str (const char *s)
-    {
-      while (*s)
-	write_char (*s++);
-    }
+    char *str_arg;
+    int int_arg;
+    unsigned int uint_arg;
+    signed long long_arg;
+    unsigned long ulong_arg;
+    signed long long longlong_arg;
+    unsigned long long ulonglong_arg;
 
-  while ((c = *fmt++) != 0)
-    {
-      if (c != '%')
-	write_char (c);
-      else
-	{
-	  char tmp[32];
-	  int n;
-#ifndef STAGE1_5
-	  char *p;
-#endif
+    c = *fmt++;
+    if (!c)
+        return 0;
 
-	  c = *fmt++;
-	  switch (c)
-	    {
-#ifndef STAGE1_5
-	    case 'd':
-	    case 'x':
-	    case 'X':
-#endif
-	    case 'u':
-	      n = va_arg (args, int);
-	      *convert_to_ascii (tmp, c, n) = 0;
+    int is_fmt = 0, is_long = 0, is_signed = 1, is_cap = 0, restart = 1;
+    do {
+        if (restart) {
+            restart = 0;
+            is_fmt = 0;
+            is_long = 0;
+            is_cap = 0;
+            is_signed = 1;
+            buf[0] = '\0';
+            pos = 0;
+        }
 
-	      write_str (tmp);
-	      break;
+        if (!is_fmt) {
+            if (c == '%') {
+                is_fmt = 1;
+                buf[pos++] = c;
+                buf[pos] = '\0';
+                continue;
+            } else {
+                write_char(&str, c, &count);
+                continue;
+            }
+        }
 
-#ifndef STAGE1_5
-	    case 'c':
-	      n = va_arg (args, int);
-	      write_char (n & 0xff);
-	      break;
+        /* below here we only ever hit when is_fmt is  1 */
+        switch (c) {
+            /* first, modifiers */
+            case '%':
+                if (pos != 0)
+                    write_str(&str, buf, &count);
+                write_char(&str, c, &count);
+                restart = 1;
+                continue;
+            case 'l':
+                buf[pos++] = c;
+                buf[pos] = '\0';
+                is_long ++;
+                continue;
+            case 'L':
+                buf[pos++] = c;
+                buf[pos] = '\0';
+                is_long = 2;
+                continue;
 
-	    case 's':
-	      p = va_arg (args, char *);
-	      write_str (p);
-	      break;
-#endif
+            /* below here are things we actually have to print */
+            case 'c':
+                int_arg = va_arg(args, int) & 0xff;
+                if (int_arg == 0) {
+                    char *tmp_str = "\\x00";
+                    write_str(&tmp_str, buf, &count);
+                } else {
+                    write_char(&str, int_arg, &count);
+                }
+                restart = 1;
+                continue;
+            case 'd':
+                if (is_long == 0) {
+                    int_arg = va_arg(args, signed int);
+                    format_ascii(buf, int_arg, 0, 0);
+                } else if (is_long == 1) {
+                    long_arg = va_arg(args, signed long);
+                    format_ascii(buf, long_arg, 0, 0);
+                } else {
+                    longlong_arg = va_arg(args, signed long long);
+                    format_ascii(buf, longlong_arg, 0, 0);
+                }
+                write_str(&str, buf, &count);
+                restart = 1;
+                continue;
+            case 's':
+                str_arg = va_arg(args, char *);
+                write_str(&str, str_arg, &count);
+                restart = 1;
+                continue;
+            case 'u':
+            case 'U':
+                if (is_long == 0) {
+                    uint_arg = va_arg(args, unsigned int);
+                    format_ascii(buf, uint_arg, 0, 0);
+                } else if (is_long == 1) {
+                    ulong_arg = va_arg(args, unsigned long);
+                    format_ascii(buf, ulong_arg, 0, 0);
+                } else {
+                    ulonglong_arg = va_arg(args, unsigned long long);
+                    format_ascii(buf, ulonglong_arg, 0, 0);
+                }
+                write_str(&str, buf, &count);
+                restart = 1;
+                continue;
+            case 'P':
+                is_cap = 1;
+            case 'p':
+                ulong_arg = va_arg(args, unsigned long);
+                format_ascii(buf, ulong_arg, 1, is_cap);
+                write_str(&str, is_cap ? "0X" : "0x", &count);
+                write_str(&str, buf, &count);
+                restart = 1;
+                continue;
+            case 'X':
+                is_cap = 1;
+            case 'x':
+                if (is_long == 0) {
+                    uint_arg = va_arg(args, unsigned int);
+                    format_ascii(buf, uint_arg, 1, is_cap);
+                } else if (is_long == 1) {
+                    ulong_arg = va_arg(args, unsigned long);
+                    format_ascii(buf, ulong_arg, 1, is_cap);
+                } else {
+                    ulonglong_arg = va_arg(args, unsigned long long);
+                    format_ascii(buf, ulonglong_arg, 1, is_cap);
+                }
+                write_str(&str, buf, &count);
+                restart = 1;
+                continue;
+            default:
+                buf[pos++] = c;
+                buf[pos] = '\0';
+                write_str(&str, buf, &count);
+                restart = 1;
+                continue;
+        }
+    } while ((c = *fmt++));
 
-	    default:
-	      write_char (c);
-	      break;
-	    }
-	}
-    }
-
-  if (str)
-    *str = '\0';
-
-  return count;
+    if (str)
+        *str = '\0';
+    return count;
 }
 
 void
