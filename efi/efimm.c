@@ -206,7 +206,7 @@ static void
 add_memory_region (struct e820_entry *e820_map,
 		   int *e820_nr_map,
 		   unsigned long long start,
-		   unsigned long size,
+		   unsigned long long size,
 		   unsigned int type)
 {
   int x = *e820_nr_map;
