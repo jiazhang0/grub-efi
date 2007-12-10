@@ -120,7 +120,6 @@ free_pages (void)
     }
 }
 
-extern void sleep (int secs);
 /* Allocate pages for the real mode code and the protected mode code
    for linux as well as a memory map buffer.  */
 static int
@@ -172,10 +171,8 @@ allocate_pages (grub_size_t real_size, grub_size_t prot_size)
        desc < mmap_end;
        desc = NEXT_MEMORY_DESCRIPTOR (desc, desc_size))
     {
-        sleep(1);
       /* Probably it is better to put the real mode code in the traditional
 	 space for safety.  */
-      grub_printf("  desc_type = %d physical_start: %p num_pages: %ld real_mode_pages: %ld\n", desc->type, desc->physical_start, desc->num_pages, real_mode_pages);
       if (desc->type == GRUB_EFI_CONVENTIONAL_MEMORY
 	  && desc->physical_start <= 0x90000
 	  && desc->num_pages >= real_mode_pages)
@@ -277,110 +274,131 @@ grub_console_getwh (void)
   return ((columns << 8) | rows);
 }
 
-static void
-set_video_params (struct linux_kernel_params *params)
+static int
+set_efi_graphics_params(struct linux_kernel_params *params)
 {
-  grub_efi_uintn_t size;
   grub_efi_graphics_output_t *gop_intf = NULL;
-  grub_efi_graphics_output_mode_information_t *gop_info = NULL;
   grub_efi_graphics_output_mode_t *gop_mode = NULL;
   grub_efi_status_t efi_status = GRUB_EFI_SUCCESS;
+  grub_efi_graphics_output_mode_information_t *gop_info = NULL;
+  grub_efi_uintn_t size;
+
 
   gop_intf = grub_efi_locate_protocol (&graphics_output_guid, NULL);
   if (gop_intf == NULL)
-    goto fallback;
+    return -1;
+
   gop_mode = gop_intf->mode;
+
   efi_status = Call_Service_4 (gop_intf->query_mode,
 			       gop_intf, gop_mode->mode, &size, &gop_info);
-  if (efi_status != GRUB_EFI_SUCCESS)
-    goto fallback;
 
-  /* No VBE on EFI.  */
-  params->lfb_width = gop_info->horizontal_resolution;
-  params->lfb_height = gop_info->vertical_resolution;
-  params->lfb_base = gop_mode->frame_buffer_base;
-  params->lfb_size = gop_mode->frame_buffer_size;
-  params->lfb_pages = 1;
-  params->vesapm_segment = 0;
-  params->vesapm_offset = 0;
-  params->vesa_attrib = 0;
-  if (gop_info->pixel_format == GRUB_EFI_PIXEL_RGBR_8BIT_PER_COLOR)
-    {
-      params->lfb_depth = 32;
-      params->red_mask_size = 8;
-      params->red_field_pos = 0;
-      params->green_mask_size = 8;
-      params->green_field_pos = 8;
-      params->blue_mask_size = 8;
-      params->blue_field_pos = 16;
-      params->reserved_mask_size = 8;
-      params->reserved_field_pos = 24;
-      params->lfb_line_len = gop_info->pixels_per_scan_line * 4;
-    }
-  else if (gop_info->pixel_format == GRUB_EFI_PIXEL_BGRR_8BIT_PER_COLOR)
-    {
-      params->lfb_depth = 32;
-      params->red_mask_size = 8;
-      params->red_field_pos = 16;
-      params->green_mask_size = 8;
-      params->green_field_pos = 8;
-      params->blue_mask_size = 8;
-      params->blue_field_pos = 0;
-      params->reserved_mask_size = 8;
-      params->reserved_field_pos = 24;
-      params->lfb_line_len = gop_info->pixels_per_scan_line * 4;
-    }
-  else if (gop_info->pixel_format == GRUB_EFI_PIXEL_BIT_MASK)
-    {
-      find_bits (gop_info->pixel_information.red_mask,
-		 &params->red_field_pos, &params->red_mask_size);
-      find_bits (gop_info->pixel_information.green_mask,
-		 &params->green_field_pos, &params->green_mask_size);
-      find_bits (gop_info->pixel_information.blue_mask,
-		 &params->blue_field_pos, &params->blue_mask_size);
-      find_bits (gop_info->pixel_information.reserved_mask,
-		 &params->reserved_field_pos, &params->reserved_mask_size);
-      params->lfb_depth = params->red_mask_size + params->green_mask_size +
-	params->blue_mask_size + params->reserved_mask_size;
-      params->lfb_line_len = (gop_info->pixels_per_scan_line * params->lfb_depth) / 8;
-    }
-  else
-    {
-      params->lfb_depth = 4;
-      params->red_mask_size = 0;
-      params->red_field_pos = 0;
-      params->green_mask_size = 0;
-      params->green_field_pos = 0;
-      params->blue_mask_size = 0;
-      params->blue_field_pos = 0;
-      params->reserved_mask_size = 0;
-      params->reserved_field_pos = 0;
-      params->lfb_line_len = params->lfb_width / 2;
-    }
-#if 0
-  params->video_cursor_x = 0;
-  params->video_cursor_y = 0;
-  params->video_page = 0;
-  params->video_mode = 0;
-  params->video_width = 0;
-  params->video_ega_bx = 0;
-  params->video_height = 0;
-  params->have_vga = 0x70;
-  params->font_size = 0;
-#else
-  params->video_cursor_x = grub_efi_system_table->con_out->mode->cursor_column;
-  params->video_cursor_y = grub_efi_system_table->con_out->mode->cursor_row;
-  params->video_page = 0; /* ??? */
-  params->video_mode = grub_efi_system_table->con_out->mode->mode;
-  params->video_width = (grub_console_getwh () >> 8);
-  params->video_ega_bx = 0;
-  params->video_height = (grub_console_getwh () & 0xff);
-  params->have_vga = 0;
-  params->font_size = 16; /* XXX */
-#endif
-  return;
 
- fallback:
+  if (efi_status == GRUB_EFI_SUCCESS) {
+    /* No VBE on EFI.  */
+    params->lfb_width = gop_info->horizontal_resolution;
+    params->lfb_height = gop_info->vertical_resolution;
+    params->lfb_base = gop_mode->frame_buffer_base;
+    params->lfb_size = gop_mode->frame_buffer_size;
+    params->lfb_pages = 1;
+    params->vesapm_segment = 0;
+    params->vesapm_offset = 0;
+    params->vesa_attrib = 0;
+    if (gop_info->pixel_format == GRUB_EFI_PIXEL_RGBR_8BIT_PER_COLOR)
+      {
+        params->lfb_depth = 32;
+        params->red_mask_size = 8;
+        params->red_field_pos = 0;
+        params->green_mask_size = 8;
+        params->green_field_pos = 8;
+        params->blue_mask_size = 8;
+        params->blue_field_pos = 16;
+        params->reserved_mask_size = 8;
+        params->reserved_field_pos = 24;
+        params->lfb_line_len = gop_info->pixels_per_scan_line * 4;
+      }
+    else if (gop_info->pixel_format == GRUB_EFI_PIXEL_BGRR_8BIT_PER_COLOR)
+      {
+        params->lfb_depth = 32;
+        params->red_mask_size = 8;
+        params->red_field_pos = 16;
+        params->green_mask_size = 8;
+        params->green_field_pos = 8;
+        params->blue_mask_size = 8;
+        params->blue_field_pos = 0;
+        params->reserved_mask_size = 8;
+        params->reserved_field_pos = 24;
+        params->lfb_line_len = gop_info->pixels_per_scan_line * 4;
+      }
+    else if (gop_info->pixel_format == GRUB_EFI_PIXEL_BIT_MASK)
+      {
+        find_bits (gop_info->pixel_information.red_mask,
+  		 &params->red_field_pos, &params->red_mask_size);
+        find_bits (gop_info->pixel_information.green_mask,
+  		 &params->green_field_pos, &params->green_mask_size);
+        find_bits (gop_info->pixel_information.blue_mask,
+  		 &params->blue_field_pos, &params->blue_mask_size);
+        find_bits (gop_info->pixel_information.reserved_mask,
+  		 &params->reserved_field_pos, &params->reserved_mask_size);
+        params->lfb_depth = params->red_mask_size + params->green_mask_size +
+  	params->blue_mask_size + params->reserved_mask_size;
+        params->lfb_line_len = (gop_info->pixels_per_scan_line * params->lfb_depth) / 8;
+      }
+    else
+      {
+        params->lfb_depth = 4;
+        params->red_mask_size = 0;
+        params->red_field_pos = 0;
+        params->green_mask_size = 0;
+        params->green_field_pos = 0;
+        params->blue_mask_size = 0;
+        params->blue_field_pos = 0;
+        params->reserved_mask_size = 0;
+        params->reserved_field_pos = 0;
+        params->lfb_line_len = params->lfb_width / 2;
+      }
+  #if 0
+    params->video_cursor_x = 0;
+    params->video_cursor_y = 0;
+    params->video_page = 0;
+    params->video_mode = 0;
+    params->video_width = 0;
+    params->video_ega_bx = 0;
+    params->video_height = 0;
+    params->have_vga = 0x70;
+    params->font_size = 0;
+  #else
+    params->video_cursor_x = grub_efi_system_table->con_out->mode->cursor_column;
+    params->video_cursor_y = grub_efi_system_table->con_out->mode->cursor_row;
+    params->video_page = 0; /* ??? */
+    params->video_mode = grub_efi_system_table->con_out->mode->mode;
+    params->video_width = (grub_console_getwh () >> 8);
+    params->video_ega_bx = 0;
+    params->video_height = (grub_console_getwh () & 0xff);
+    params->have_vga = 0;
+    params->font_size = 16; /* XXX */
+  #endif
+    return 0;
+  }
+
+  return -1;
+}
+
+static int
+set_uga_graphics_params(struct linux_kernel_params *params)
+{
+	return -1;
+}
+
+static void
+set_video_params (struct linux_kernel_params *params)
+{
+  if (set_efi_graphics_params(params) >= 0)
+    return;
+
+  if (set_uga_graphics_params(params) >= 0)
+    return;
+
   params->video_cursor_x = grub_efi_system_table->con_out->mode->cursor_column;
   params->video_cursor_y = grub_efi_system_table->con_out->mode->cursor_row;
   params->video_page = 0; /* ??? */
@@ -410,6 +428,8 @@ set_video_params (struct linux_kernel_params *params)
   params->vesapm_offset = 0;
   params->lfb_pages = 0;
   params->vesa_attrib = 0;
+
+  return;
 }
 
 /* do some funky stuff, then boot linux */
@@ -448,7 +468,6 @@ unsigned short init_gdt[] = {
   0x00CF,         /* granularity=4096, 386 (+5th nibble of limit) */
 };
 #endif
-
 
 void
 big_linux_boot (void)
@@ -520,8 +539,8 @@ big_linux_boot (void)
 
   asm volatile ( "cli" : : );
 
-  memset((void *)gdt_addr.base, gdt_addr.limit, 0);
-  memcpy((void *)gdt_addr.base, init_gdt, sizeof (init_gdt));
+  grub_memset((void *)gdt_addr.base, gdt_addr.limit, 0);
+  grub_memcpy((void *)gdt_addr.base, init_gdt, sizeof (init_gdt));
 
   if (0) {
     /* copy our real mode transition code to 0x7C00 */
@@ -581,6 +600,7 @@ grub_load_linux (char *kernel, char *arg)
       != sizeof (params_buf))
     {
       errnum = ERR_EXEC_FORMAT;
+      grub_close();
       grub_printf ("cannot read the linux header");
       goto fail;
     }
@@ -590,6 +610,7 @@ grub_load_linux (char *kernel, char *arg)
   if (lh->boot_flag != grub_cpu_to_le16 (0xaa55))
     {
       errnum = ERR_EXEC_FORMAT;
+      grub_close();
       grub_printf ("invalid magic number: %x", lh->boot_flag);
       goto fail;
     }
@@ -598,6 +619,7 @@ grub_load_linux (char *kernel, char *arg)
   if (lh->header != grub_cpu_to_le32 (GRUB_LINUX_MAGIC_SIGNATURE)
       || grub_le_to_cpu16 (lh->version) < 0x0203)
     {
+      grub_close();
       errnum = ERR_EXEC_FORMAT;
       grub_printf ("too old version");
       goto fail;
