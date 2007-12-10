@@ -350,15 +350,20 @@ grub_efidisk_read (struct grub_efidisk_data *d, grub_disk_addr_t sector,
   bio = d->block_io;
   sector_size = d->block_io->media->block_size;
 
+#if 0
   grub_dprintf ("efidisk",
-		"reading 0x%x sectors at the sector 0x%x from ??\n",
-		(unsigned) size, (unsigned int) sector);
+		"%s(sector=%Lx, size=0x%x, buf=%p) = ", __func__,
+		(unsigned long long)sector, (unsigned int)size, buf);
+#endif
 
   status = Call_Service_5 (dio->read ,
 			   dio, bio->media->media_id,
 			   sector * sector_size,
 			   size * sector_size,
 			   buf);
+#if 0
+  grub_dprintf("efidisk", "%d\n", (int)status);
+#endif
   if (status != GRUB_EFI_SUCCESS)
     return -1;
 
