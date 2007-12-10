@@ -28,10 +28,11 @@ GRAPHICS_FLAGS =
 endif
 
 GRUBEFI_FORMAT = efi-app-$(EFI_ARCH)
-GRUBSO_LD_SCRIPT = $(EFI_ARCH)/elf_efi.lds
+GRUBSO_LD_SCRIPT = @GNUEFI_LDS@
 GRUBSO_LD_FLAGS = -T $(GRUBSO_LD_SCRIPT) -nostdlib -shared -Bsymbolic
-GRUBSO_OBJS = crt0-efi.o reloc.o efimain.o
-GRUBSO_LIBS = $(top_srcdir)/stage2/libstage2.a libgrubefi.a
+
+GRUBSO_OBJS = reloc.o efimain.o @GNUEFI_CRT0@
+GRUBSO_LIBS = $(top_srcdir)/stage2/libstage2.a libgrubefi.a @LIBGCC@
 
 if NETBOOT_SUPPORT
 GRUBSO_LIBS += $(top_srcdir)/netboot/libdrivers.a
