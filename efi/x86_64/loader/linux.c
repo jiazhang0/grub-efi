@@ -33,7 +33,9 @@
 #define NEXT_MEMORY_DESCRIPTOR(desc, size)      \
   ((grub_efi_memory_descriptor_t *) ((char *) (desc) + (size)))
 
-static grub_size_t linux_mem_size;
+#define PTR_HI(x) ((grub_uint32_t) ((unsigned long long)((unsigned long)(x)) >> 32))
+
+static unsigned long linux_mem_size;
 static int loaded;
 static void *real_mode_mem;
 static void *prot_mode_mem;
@@ -463,9 +465,10 @@ big_linux_boot (void)
     params->dunno.efi_mem_desc_version = desc_version;
     params->dunno.efi_mmap = (grub_uint32_t) (unsigned long) mmap_buf;
     params->dunno.efi_mmap_size = mmap_size;
-    params->dunno.efi_mmap_hi = (grub_uint64_t) mmap_buf >> 32;
+    params->dunno.efi_mmap_hi = PTR_HI(mmap_buf);
   }
 
+#ifdef __x86_64__
   /* Pass parameters.  */
   asm volatile ("mov %0, %%rsi" : : "m" (real_mode_mem));
   asm volatile ("movl %0, %%ebx" : : "m" (params->hdr.code32_start));
@@ -477,6 +480,19 @@ big_linux_boot (void)
    */
   asm volatile ( "mov $0x700, %%rdi" : :);
   asm volatile ( "jmp *%%rdi" : :);
+#else
+  /* Pass parameters.  */
+  asm volatile ("mov %0, %%esi" : : "m" (real_mode_mem));
+  asm volatile ("movl %0, %%ebx" : : "m" (params->hdr.code32_start));
+
+  /* Enter Linux, switch from 64-bit long mode
+   * to 32-bit protect mode, this code end address
+   * must not exceed 0x1000, because linux kernel bootstrap
+   * code will flush this area
+   */
+  asm volatile ( "mov $0x700, %%edi" : :);
+  asm volatile ( "jmp *%%edi" : :);
+#endif
 
   /* Never reach here.  */
   for (;;);
@@ -601,7 +617,7 @@ grub_load_linux (char *kernel, char *arg)
     params->dunno.efi_signature = GRUB_LINUX_EFI_SIGNATURE_X64;
     params->dunno.efi_system_table = \
                         (grub_uint32_t) (unsigned long) grub_efi_system_table;
-    params->dunno.efi_system_table_hi = (grub_uint64_t) grub_efi_system_table >> 32;
+    params->dunno.efi_system_table_hi = PTR_HI(grub_efi_system_table);
   }
   /* The other EFI parameters are filled when booting.  */
 
@@ -700,6 +716,7 @@ grub_load_initrd (char *initrd)
   grub_addr_t addr;
   grub_efi_uintn_t mmap_size;
   grub_efi_memory_descriptor_t *desc;
+  grub_efi_memory_descriptor_t tdesc;
   grub_efi_uintn_t desc_size;
   struct linux_kernel_params *params;
 
@@ -724,6 +741,7 @@ grub_load_initrd (char *initrd)
   initrd_pages = (page_align (size) >> 12);
 
   params = (struct linux_kernel_params *) real_mode_mem;
+  grub_dprintf(__func__, "initrd_pages: %lu\n", initrd_pages);
 
   addr_max = grub_cpu_to_le32 (params->hdr.initrd_addr_max);
   if (linux_mem_size != 0 && linux_mem_size < addr_max)
@@ -734,13 +752,15 @@ grub_load_initrd (char *initrd)
      the last page.
      Linux 2.2.xx has a bug in the memory range check, which is
      worse than that of Linux 2.3.xx, so avoid the last 64kb.  */
-  addr_max -= 0x10000;
+  //addr_max -= 0x10000;
 
   /* Usually, the compression ratio is about 50%.  */
   addr_min = (grub_addr_t) prot_mode_mem + ((prot_mode_pages * 3) << 12);
+  grub_dprintf(__func__, "prot_mode_mem=%p prot_mode_pages=%lu\n", prot_mode_mem, prot_mode_pages);
 
   /* Find the highest address to put the initrd.  */
   mmap_size = find_mmap_size ();
+  grub_dprintf(__func__, "addr_min: 0x%lx addr_max: 0x%lx mmap_size: %lu\n", addr_min, addr_max, mmap_size);
   if (grub_efi_get_memory_map (&mmap_size, mmap_buf, 0, &desc_size, 0) <= 0)
     grub_fatal ("cannot get memory map");
 
@@ -749,8 +769,12 @@ grub_load_initrd (char *initrd)
        desc < NEXT_MEMORY_DESCRIPTOR (mmap_buf, mmap_size);
        desc = NEXT_MEMORY_DESCRIPTOR (desc, desc_size))
     {
-      if (desc->type == GRUB_EFI_CONVENTIONAL_MEMORY
-	  && desc->physical_start >= addr_min
+      if (desc->type != GRUB_EFI_CONVENTIONAL_MEMORY)
+        continue;
+      memcpy(&tdesc, desc, sizeof (tdesc));
+
+      grub_dprintf(__func__, "desc = {type=%d,ps=0x%llx,vs=0x%llx,sz=%llu,attr=%llu}\n", desc->type, (unsigned long long)desc->physical_start, (unsigned long long)desc->virtual_start, (unsigned long long)desc->num_pages, (unsigned long long)desc->attribute);
+      if (desc->physical_start >= addr_min
 	  && desc->physical_start + page_align (size) <= addr_max
 	  && desc->num_pages >= initrd_pages)
 	{
