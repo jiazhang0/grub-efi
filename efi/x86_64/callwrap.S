@@ -75,6 +75,40 @@ ENTRY(x64_call7)
         addq $64, %rsp
         ret
 
+ENTRY(x64_call8)
+	addq $72, %rsp
+	mov  %r9, 32(%rsp)
+        mov 72+8(%rsp), %rax
+        mov %rax, 40(%rsp)
+        mov 72+16(%rsp), %rax
+        mov %rax, 48(%rsp)
+        mov 72+24(%rsp), %rax
+        mov %rax, 56(%rsp)
+        mov 72+32(%rsp), %rax
+        mov %rax, 64(%rsp)
+        mov 72+40(%rsp), %rax
+        mov %rax, 72(%rsp)
+        call *%rdi
+        addq $72, %rsp
+        ret
+
+ENTRY(x64_call9)
+	addq $80, %rsp
+	mov  %r9, 32(%rsp)
+        mov 80+8(%rsp), %rax
+        mov %rax, 40(%rsp)
+        mov 80+16(%rsp), %rax
+        mov %rax, 48(%rsp)
+        mov 80+24(%rsp), %rax
+        mov %rax, 56(%rsp)
+        mov 80+32(%rsp), %rax
+        mov %rax, 64(%rsp)
+        mov 80+40(%rsp), %rax
+        mov %rax, 72(%rsp)
+        call *%rdi
+        addq $80, %rsp
+        ret
+
 ENTRY(x64_call10)
         addq $88, %rsp
         mov  %r9, 32(%rsp)
