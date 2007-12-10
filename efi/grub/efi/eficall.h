@@ -22,6 +22,12 @@
 
 #include <grub/types.h>
 
+#ifndef __x86_64__
+#ifdef EFI_FUNCTION_WRAPPER
+#undef EFI_FUNCTION_WRAPPER
+#endif
+#endif
+
 #ifdef  EFI_FUNCTION_WRAPPER
 typedef long EFI_STATUS;
 
