@@ -57,7 +57,7 @@ grub_efi_fini (void)
 }
 
 void *
-grub_malloc (unsigned long size)
+grub_malloc (grub_size_t size)
 {
   return grub_efi_allocate_pool (size);
 }
