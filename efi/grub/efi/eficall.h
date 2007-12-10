@@ -48,6 +48,22 @@ EFI_STATUS x64_call7 (unsigned long func, unsigned long a,
 		      unsigned long b, unsigned long c,
 		      unsigned long d, unsigned long e,
 		      unsigned long f, unsigned long g);
+EFI_STATUS x64_call8 (unsigned long func, unsigned long a,
+		      unsigned long b, unsigned long c,
+		      unsigned long d, unsigned long e,
+		      unsigned long f, unsigned long g,
+		      unsigned long h);
+EFI_STATUS x64_call9 (unsigned long func, unsigned long a,
+		      unsigned long b, unsigned long c,
+		      unsigned long d, unsigned long e,
+		      unsigned long f, unsigned long g,
+		      unsigned long h, unsigned long i);
+EFI_STATUS x64_call10(unsigned long func, unsigned long a,
+		      unsigned long b, unsigned long c,
+		      unsigned long d, unsigned long e,
+		      unsigned long f, unsigned long g,
+		      unsigned long h, unsigned long i,
+		      unsigned long j);
 
 #define Call_Service(func)                      x64_call0((unsigned long)func)
 
@@ -93,6 +109,40 @@ EFI_STATUS x64_call7 (unsigned long func, unsigned long a,
 							  (unsigned long)f,    \
 							  (unsigned long)g)
 
+#define Call_Service_8(func,a,b,c,d,e,f,g,h)    x64_call8((unsigned long)func, \
+							  (unsigned long)a,    \
+							  (unsigned long)b,    \
+							  (unsigned long)c,    \
+							  (unsigned long)d,    \
+							  (unsigned long)e,    \
+							  (unsigned long)f,    \
+							  (unsigned long)g,    \
+							  (unsigned long)h)
+
+#define Call_Service_9(func,a,b,c,d,e,f,g,h,i)  x64_call9((unsigned long)func, \
+							  (unsigned long)a,    \
+							  (unsigned long)b,    \
+							  (unsigned long)c,    \
+							  (unsigned long)d,    \
+							  (unsigned long)e,    \
+							  (unsigned long)f,    \
+							  (unsigned long)g,    \
+							  (unsigned long)h,    \
+							  (unsigned long)i)
+
+#define Call_Service_10(func,a,b,c,d,e,f,g,h,i,j) \
+					       x64_call10((unsigned long)func, \
+							  (unsigned long)a,    \
+							  (unsigned long)b,    \
+							  (unsigned long)c,    \
+							  (unsigned long)d,    \
+							  (unsigned long)e,    \
+							  (unsigned long)f,    \
+							  (unsigned long)g,    \
+							  (unsigned long)h,    \
+							  (unsigned long)i,    \
+							  (unsigned long)j)
+
 #else
 
 #define Call_Service(func)                      func()
@@ -103,6 +153,9 @@ EFI_STATUS x64_call7 (unsigned long func, unsigned long a,
 #define Call_Service_5(func,a,b,c,d,e)          func(a,b,c,d,e)
 #define Call_Service_6(func,a,b,c,d,e,f)        func(a,b,c,d,e,f)
 #define Call_Service_7(func,a,b,c,d,e,f,g)      func(a,b,c,d,e,f,g)
+#define Call_Service_8(func,a,b,c,d,e,f,g,h)    func(a,b,c,d,e,f,g,h)
+#define Call_Service_9(func,a,b,c,d,e,f,g,h,i)  func(a,b,c,d,e,f,g,h,i)
+#define Call_Service_10(func,a,b,c,d,e,f,g,h,i,j)  func(a,b,c,d,e,f,g,h,i,j)
 #endif
 
 #endif
