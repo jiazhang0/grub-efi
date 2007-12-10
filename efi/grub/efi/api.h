@@ -95,6 +95,16 @@
     { 0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a } \
   }
 
+#define GRUB_EFI_UGA_DRAW_GUID \
+  { 0x982c298b, 0xf4fa, 0x41cb, \
+    { 0xb8, 0x38, 0x77, 0xaa, 0x68, 0x8f, 0xb8, 0x39 } \
+  }
+
+#define GRUB_EFI_UGA_IO_GUID \
+  { 0x61a4d49e, 0x6f68, 0x4f1b, \
+    { 0xb9, 0x22, 0xa8, 0x6e, 0xed, 0xb, 0x7, 0xa2 } \
+  }
+
 #define GRUB_EFI_SIMPLE_FILE_SYSTEM_GUID	\
   { 0x964e5b22, 0x6459, 0x11d2, \
     { 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b } \
@@ -1143,6 +1153,8 @@ struct grub_efi_graphics_output_blt_pixel
 };
 typedef struct grub_efi_graphics_output_blt_pixel
   grub_efi_graphics_output_blt_pixel_t;
+typedef struct grub_efi_graphics_output_blt_pixel
+  grub_efi_uga_pixel_t;
 
 union grub_graphics_output_blt_pixel_union
 {
@@ -1193,6 +1205,120 @@ struct grub_efi_graphics_output
   grub_efi_graphics_output_mode_t *mode;
 };
 typedef struct grub_efi_graphics_output grub_efi_graphics_output_t;
+
+typedef enum {
+  EfiUgaVideoFill,
+  EfiUgaVideoToBltBuffer,
+  EfiUgaBltBufferToVideo,
+  EfiUgaVideoToVideo,
+  EfiUgaBltMax
+} grub_efi_uga_blt_operation_t;
+
+struct grub_efi_uga_draw
+{
+  grub_efi_status_t (*get_mode) (struct grub_efi_uga_draw * this,
+                                 grub_efi_uint32_t *horizontal_resolution,
+                                 grub_efi_uint32_t *vertical_resolution,
+                                 grub_efi_uint32_t *color_depth,
+                                 grub_efi_uint32_t *refresh_rate);
+  grub_efi_status_t (*set_mode) (struct grub_efi_uga_draw * this,
+                                 grub_efi_uint32_t horizontal_resolution,
+                                 grub_efi_uint32_t vertical_resolution,
+                                 grub_efi_uint32_t color_depth,
+                                 grub_efi_uint32_t refresh_rate);
+  grub_efi_status_t (*blt) (struct grub_efi_uga_draw * this,
+                            grub_efi_uga_pixel_t *blt_buffer,
+                            grub_efi_uga_blt_operation_t blt_operation,
+                            grub_efi_uintn_t source_x,
+                            grub_efi_uintn_t source_y,
+                            grub_efi_uintn_t destination_x,
+                            grub_efi_uintn_t destination_y,
+                            grub_efi_uintn_t width,
+                            grub_efi_uintn_t height,
+                            grub_efi_uintn_t delta);
+};
+typedef struct grub_efi_uga_draw grub_efi_uga_draw_t;
+
+typedef grub_uint32_t grub_uga_status_t;
+
+typedef enum {
+  UgaDtParentBus = 1,
+  UgaDtGraphicsController,
+  UgaDtOutputController,
+  UgaDtOutputPort,
+  UgaDtOther
+} grub_uga_device_type_t;
+
+typedef grub_efi_uint32_t grub_uga_device_id_t;
+
+struct grub_uga_device_data {
+  grub_uga_device_type_t device_type;
+  grub_uga_device_id_t device_id;
+  grub_efi_uint32_t device_context_size;
+  grub_efi_uint32_t shared_context_size;
+};
+typedef struct grub_uga_device_data grub_uga_device_data_t;
+
+struct grub_uga_device {
+  void *device_context;
+  void *shared_context;
+  void *runtime_context;
+  struct grub_uga_device *parent_device;
+  void *bus_io_services;
+  void *stdio_services;
+  grub_uga_device_data_t device_data;
+};
+typedef struct grub_uga_device grub_uga_device_t;
+
+typedef enum {
+  UgaIoGetVersion = 1,
+  UgaIoGetChildDevice,
+  UgaIoStartDevice,
+  UgaIoStopDevice,
+  UgaIoFlushDevice,
+  UgaIoResetDevice,
+  UgaIoGetDeviceState,
+  UgaIoSetDeviceState,
+  UgaIoSetPowerState,
+  UgaIoGetMemoryConfiguration,
+  UgaIoSetVideoMode,
+  UgaIoCopyRectangle,
+  UgaIoGetEdidSegment,
+  UgaIoDeviceChannelOpen,
+  UgaIoDeviceChannelClose,
+  UgaIoDeviceChannelRead,
+  UgaIoDeviceChannelWrite,
+  UgaIoGetPersistentDataSize,
+  UgaIoGetPersistentData,
+  UgaIoSetPersistentData,
+  UgaIoGetDevicePropertySize,
+  UgaIoGetDeviceProperty,
+  UgaIoBtPrivateInterface
+} grub_uga_io_request_code_t;
+
+struct grub_uga_io_request {
+  grub_uga_io_request_code_t io_request_code;
+  void *in_buffer;
+  grub_efi_uint64_t in_buffer_size;
+  grub_efi_uint64_t bytes_returned;
+};
+typedef struct grub_uga_io_request grub_uga_io_request_t;
+
+struct grub_efi_uga_io
+{
+  grub_efi_status_t (*create_device) (struct grub_efi_uga_io * this,
+                                      grub_uga_device_t *parent_device,
+                                      grub_uga_device_data_t *device_data,
+                                      void *runtime_context,
+                                      grub_uga_device_t **device);
+  grub_efi_status_t (*delete_device) (struct grub_efi_uga_io * this,
+                                      grub_uga_device_t *device);
+  grub_uga_status_t (*dispatch_service) (grub_uga_device_t *device,
+                                         grub_uga_io_request_t *io_request);
+};
+typedef struct grub_efi_uga_io grub_efi_uga_io_t;
+
+/* XXX PJFIX add uga driver handoff stuff */
 
 // File Open Modes
 #define GRUB_EFI_FILE_MODE_READ		0x0000000000000001ULL
