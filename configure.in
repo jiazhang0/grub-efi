@@ -48,6 +48,7 @@ fi
 # Sanity check.
 case "$host_cpu"-"$platform" in
   i386-pc) ;;
+  i386-efi) ;;
   x86_64-pc) ;;
   x86_64-efi) ;;
   *) AC_MSG_ERROR([unsupported machine type "$host_cpu"-"$platform"]) ;;
@@ -61,6 +62,20 @@ if test "x$platform" = xefi; then
   esac
   AC_SUBST(EFI_ARCH)
 fi
+
+gnuefi_path=/usr/lib/gnuefi
+gnuefi_crt0=${gnuefi_path}/crt0-efi-${EFI_ARCH}.o
+if ! test -f $gnuefi_crt0 ; then
+  gnuefi_crt0=crt0-efi.o
+fi
+GNUEFI_CRT0=${gnuefi_crt0}
+AC_SUBST(GNUEFI_CRT0)
+gnuefi_lds=${gnuefi_path}/elf_${EFI_ARCH}_efi.lds
+if ! test -f $gnuefi_lds ; then
+  gnuefi_lds=${EFI_ARCH}/elf_efi.lds
+fi
+GNUEFI_LDS=${gnuefi_lds}
+AC_SUBST(GNUEFI_LDS)
 
 AC_SUBST(platform)
 AM_CONDITIONAL(PLATFORM_EFI, test "x$platform" = xefi)
@@ -158,7 +173,10 @@ if test "x$ac_cv_prog_gcc" = xyes; then
 fi
 STAGE2_CFLAGS="$STAGE2_CFLAGS -isystem `$CC -print-file-name=include`"
 
-LOADER_LDFLAGS="-Wl,--build-id=none"
+LIBGCC=$(gcc -static-libgcc -print-libgcc-file-name)
+AC_SUBST(LIBGCC)
+
+LOADER_LDFLAGS="-Wl,--build-id=none ${LIBGCC}"
 AC_SUBST(LOADER_LDFLAGS)
 
 if test "x$platform" = xefi; then
