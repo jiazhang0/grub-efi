@@ -9,7 +9,6 @@
 #include <graphics.h>
 
 #include "graphics.h"
-#include "ugadebug.h"
 
 int foreground = 0x00ffffff, background = 0; 
 int graphics_inited = 0;
