@@ -1,9 +1,7 @@
-/* efigraph.c - graphics mode support for GRUB/EFI */
-/* Implemented as a terminal type by Jeremy Katz <katzj@redhat.com> based
- * on a patch by Paulo César Pereira de Andrade <pcpa@conectiva.com.br>
- */
+/* efigraph.c - EFI "graphics output" support for GRUB/EFI */
 /*
  *  GRUB  --  GRand Unified Bootloader
+ *  Copyright 2007 Red Hat, Inc.
  *  Copyright (C) 2007 Intel Corp.
  *  Copyright (C) 2001,2002  Red Hat, Inc.
  *  Portions copyright (C) 2000  Conectiva, Inc.
@@ -33,6 +31,9 @@
 #include <shared.h>
 #include <graphics.h>
 
+#include "graphics.h"
+#include "xpm.h"
+
 struct grub_pixel_info
 {
   char depth_bits;
@@ -47,56 +48,715 @@ struct grub_pixel_info
   unsigned char reserved_pos;
   int line_length;
 };
+
 typedef struct grub_pixel_info grub_pixel_info_t;
 
-int saved_videomode;
-extern const unsigned char font8x16[];
-
-int graphics_inited = 0;
-static char splashimage[64];
-
-/* constants to define the viewable area */
-const int x0 = 0;
-const int x1 = 80;
-const int y0 = 0;
-const int y1 = 30;
-
-/* text buffer has to be kept around so that we can write things as we
- * scroll and the like */
-unsigned short text[80 * 30];
-
-/* why do these have to be kept here? */
-int foreground = (63 << 16) | (63 << 8) | (63), background = 0, border = 0;
-
-/* current position */
-static int fontx = 0;
-static int fonty = 0;
-
-/* global state so that we don't try to recursively scroll or cursor */
-static int no_scroll = 0;
-
-/* color state */
-static int graphics_standard_color = A_NORMAL;
-static int graphics_normal_color = A_NORMAL;
-static int graphics_highlight_color = A_REVERSE;
-static int graphics_current_color = A_NORMAL;
-static color_state graphics_color_state = COLOR_STATE_STANDARD;
 
 static grub_efi_guid_t graphics_output_guid = GRUB_EFI_GRAPHICS_OUTPUT_GUID;
 
-static grub_efi_graphics_output_t *gop_intf = NULL;
-static grub_efi_graphics_output_mode_information_t gop_mode_info;
-static grub_pixel_info_t gop_pixel_info;
-static int gop_mode_num = -1;
-static int saved_gop_mode_num = -1;
+#ifndef MIN
+#define MIN(x,y) ( ((x) < (y)) ? (x) : (y))
+#endif
+#ifndef MAX
+#define MAX(x,y) ( ((x) < (y)) ? (y) : (x))
+#endif
 
-static int palette[0x11];
+#define pixel_equal(x,y) ((x).red == (y).red && \
+                          (x).green == (y).green && \
+                          (x).blue == (y).blue)
 
-unsigned char *bmp_bg;
+struct video_mode {
+    grub_efi_uint32_t number;
+    grub_efi_uintn_t size;
+    grub_efi_graphics_output_mode_information_t *info;
+};
 
-/* graphics local functions */
-static void graphics_setxy (int col, int row);
-static void graphics_scroll (void);
+#define MAX_PALETTE 16
+struct eg {
+    struct graphics_backend *backend;
+    grub_efi_graphics_output_t *output_intf;
+    struct video_mode **modes;
+    int max_mode;
+    grub_efi_uint32_t text_mode;
+    grub_efi_uint32_t graphics_mode;
+    grub_pixel_info_t pixel_info;
+    enum { TEXT, GRAPHICS } current_mode;
+
+    position_t screen_size;
+    position_t screen_pos;
+
+    struct bltbuf *background;
+
+    grub_efi_graphics_output_blt_pixel_t palette[MAX_PALETTE + 1];
+};
+
+#define RGB(r,g,b) { .red = r, .green = g, .blue = b }
+
+static grub_efi_graphics_output_blt_pixel_t cga_colors[] = {
+    RGB(0x00,0x00,0x00), //  0 Black
+    RGB(0x7f,0x00,0x00), //  1 Dark Red
+    RGB(0x00,0x7f,0x00), //  2 Dark Green
+    RGB(0x7f,0x7f,0x00), //  3 Dark Yellow
+    RGB(0x00,0x00,0x7f), //  4 Dark Blue
+    RGB(0x7f,0x00,0x7f), //  5 Dark Magenta
+    RGB(0x00,0x7f,0x7f), //  6 Dark Cyan
+    RGB(0xc0,0xc0,0xc0), //  7 Light Grey
+    RGB(0x7f,0x7f,0x7f), //  8 Dark Grey
+    RGB(0xff,0x00,0x00), //  9 Red
+    RGB(0x00,0xff,0x00), // 10 Green
+    RGB(0xff,0xff,0x00), // 11 Yellow
+    RGB(0x00,0x00,0xff), // 12 Blue
+    RGB(0xff,0x00,0xff), // 13 Magenta
+    RGB(0x00,0xff,0xff), // 14 Cyan
+    RGB(0xff,0xff,0xff), // 15 White
+    RGB(0xff,0xff,0xff), // 16 Also white ;)
+};
+
+static const int n_cga_colors = sizeof (cga_colors) / sizeof (cga_colors[0]);
+
+static void
+pixel_to_rgb(grub_efi_graphics_output_blt_pixel_t *pixel,
+             int *red, int *green, int *blue)
+{
+    *red = pixel->red;
+    *green = pixel->green;
+    *blue = pixel->blue;
+}
+
+static void
+rgb_to_pixel(int red, int green, int blue,
+             grub_efi_graphics_output_blt_pixel_t *pixel)
+{
+    pixel->red = red;
+    pixel->green = green;
+    pixel->blue = blue;
+}
+
+static void
+position_to_phys(struct eg *eg, position_t *virt, position_t *phys)
+{
+    phys->x = virt->x + eg->screen_pos.x;
+    phys->y = virt->y + eg->screen_pos.y;
+}
+
+static int
+abs_paddr(struct eg *eg, position_t *virt)
+{
+    position_t phys;
+    position_to_phys(eg, virt, &phys);
+    return phys.x + phys.y * eg->screen_size.x;
+}
+
+struct bltbuf {
+    grub_efi_uintn_t width;
+    grub_efi_uintn_t height;
+    grub_efi_graphics_output_blt_pixel_t pixbuf[];
+};
+
+static struct bltbuf *alloc_bltbuf(grub_efi_uintn_t width,
+					   grub_efi_uintn_t height)
+{
+	struct bltbuf *buf = NULL;
+	grub_efi_uintn_t pixbuf_size = width * height *
+		sizeof (grub_efi_graphics_output_blt_pixel_t);
+
+	if (!(buf = grub_malloc(sizeof(buf->width) + sizeof(buf->height) +
+				pixbuf_size)))
+		return NULL;
+
+	buf->width = width;
+	buf->height = height;
+	grub_memset(buf->pixbuf, '\0', pixbuf_size);
+	return buf;
+}
+
+static void
+blt_to_screen(struct eg *eg, struct bltbuf *bltbuf)
+{
+    position_t addr = {0, 0};
+
+    position_to_phys(eg, &addr, &addr);
+
+    Call_Service_10(eg->output_intf->blt, eg->output_intf, bltbuf->pixbuf,
+                    GRUB_EFI_BLT_BUFFER_TO_VIDEO,
+                    0, 0,
+                    addr.x, addr.y,
+                    bltbuf->width, bltbuf->height,
+                    0);
+}
+
+static void
+blt_pos_to_screen_pos(struct eg *eg, struct bltbuf *bltbuf,
+                      position_t *bltpos, position_t *bltsz, position_t *pos)
+{
+    position_t phys;
+
+    position_to_phys(eg, pos, &phys);
+
+    Call_Service_10(eg->output_intf->blt, eg->output_intf, bltbuf->pixbuf,
+                    GRUB_EFI_BLT_BUFFER_TO_VIDEO,
+                    bltpos->x, bltpos->y,
+                    phys.x, phys.y,
+                    bltsz->x, bltsz->y,
+                    0);
+}
+
+static void
+blt_to_screen_pos(struct eg *eg, struct bltbuf *bltbuf, position_t *pos)
+{
+    position_t bltpos = {0, 0};
+    position_t bltsz = { bltbuf->width, bltbuf->height };
+    blt_pos_to_screen_pos(eg, bltbuf, &bltpos, &bltsz, pos);
+}
+
+static int
+blt_from_screen_pos(struct eg *eg, struct bltbuf **retbuf,
+    position_t *pos, position_t *size)
+{
+    struct bltbuf *bltbuf = NULL;
+    position_t phys;
+
+    if (!retbuf)
+        return 0;
+
+    if (*retbuf)
+        grub_free(*retbuf);
+
+    bltbuf = alloc_bltbuf(size->x, size->y);
+    if (!bltbuf)
+        return 0;
+
+    position_to_phys(eg, pos, &phys);
+
+    Call_Service_10(eg->output_intf->blt, eg->output_intf, bltbuf->pixbuf,
+            GRUB_EFI_BLT_VIDEO_TO_BLT_BUFFER,
+            phys.x, phys.y,
+            0, 0,
+            size->x, size->y, 0);
+    *retbuf = bltbuf;
+    return 1;
+}
+
+static int
+save_video_mode(struct eg *eg, struct video_mode *mode)
+{
+	grub_efi_status_t status;
+
+
+
+	status = Call_Service_4(eg->output_intf->query_mode, eg->output_intf,
+                                mode->number, &mode->size, &mode->info);
+	return status == GRUB_EFI_SUCCESS;
+}
+
+static void
+get_screen_size(struct graphics_backend *backend, position_t *size)
+{
+    struct eg *eg = backend->priv;
+    grub_efi_graphics_output_mode_information_t *info;
+
+    info = eg->modes[eg->graphics_mode]->info;
+
+    size->x = info->horizontal_resolution;
+    size->y = info->vertical_resolution;
+}
+
+static int
+blt_from_screen(struct eg *eg, struct bltbuf **retbuf)
+{
+    struct bltbuf *bltbuf = NULL;
+    grub_efi_graphics_output_mode_information_t *info;
+    position_t pos = {0 ,0};
+    position_t size;
+
+    get_screen_size(eg->backend, &size);
+
+    return blt_from_screen_pos(eg, retbuf, &pos, &size);
+}
+
+static void 
+bltbuf_set_pixel(struct bltbuf *bltbuf, position_t *pos,
+                             grub_efi_graphics_output_blt_pixel_t *pixel)
+{
+    if (pos->x < 0 || pos->x >= bltbuf->width)
+        return;
+    if (pos->x < 0 || pos->y >= bltbuf->height)
+        return;
+    grub_memmove(&bltbuf->pixbuf[pos->x + pos->y * bltbuf->width], pixel,
+            sizeof *pixel);
+}
+
+static void
+bltbuf_get_pixel(struct bltbuf *bltbuf, position_t *pos,
+                 grub_efi_graphics_output_blt_pixel_t *pixel)
+{
+    if (bltbuf && pos->x < bltbuf->width && pos->y < bltbuf->height) {
+    	grub_memmove(pixel, &bltbuf->pixbuf[pos->x + pos->y * bltbuf->width],
+            sizeof *pixel);
+    } else {
+	pixel->red = 0x00;
+	pixel->green = 0x00;
+	pixel->blue = 0x00;
+    }
+}
+
+static void
+bltbuf_set_pixel_rgb(struct bltbuf *bltbuf, position_t *pos,
+                     int red, int green, int blue)
+{
+    grub_efi_graphics_output_blt_pixel_t pixel;
+    rgb_to_pixel(red, green, blue, &pixel);
+    bltbuf_set_pixel(bltbuf, pos, &pixel);
+}
+
+static void
+bltbuf_set_pixel_idx(struct eg *eg, struct bltbuf *bltbuf,
+                     position_t *pos, int idx)
+{
+    bltbuf_set_pixel(bltbuf, pos, &eg->palette[idx]);
+}
+
+static void
+bltbuf_get_pixel_idx(struct bltbuf *bltbuf, position_t *pos, int *idx)
+{
+    grub_efi_graphics_output_blt_pixel_t pixel;
+
+    rgb_to_pixel(0, 0, 0, &pixel);
+    bltbuf_get_pixel(bltbuf, pos, &pixel);
+    for (*idx = 0; *idx < 16; (*idx)++) {
+        if (pixel_equal(cga_colors[*idx], pixel))
+            break;
+    }
+}
+
+static struct bltbuf *
+xpm_to_bltbuf(struct xpm *xpm)
+{
+    struct bltbuf *bltbuf = NULL;
+    position_t pos;
+
+    if (!(bltbuf = alloc_bltbuf(xpm->width, xpm->height)))
+        return NULL;
+
+    for (pos.y = 0; pos.y < xpm->height; pos.y++) {
+        for (pos.x = 0; pos.x < xpm->width; pos.x++) {
+            xpm_pixel_t xpl;
+            unsigned char idx;
+
+            idx = xpm_get_pixel_idx(xpm, pos.x, pos.y);
+            xpm_get_idx(xpm, idx, &xpl);
+
+            bltbuf_set_pixel_rgb(bltbuf, &pos, xpl.red, xpl.green, xpl.blue);
+        }
+    }
+
+    return bltbuf;
+}
+
+static void
+cursor(struct graphics_backend *backend, int set)
+{
+    struct eg *eg;
+    int ch, invert;
+    unsigned short *text;
+    position_t fpos, screensz;
+    int offset;
+
+    eg = backend->priv;
+
+    if (set && !graphics_get_scroll())
+        return;
+
+    text = graphics_get_text_buf();
+    graphics_get_font_position(&fpos);
+    graphics_get_screen_rowscols(&screensz);
+
+    offset = fpos.y * screensz.x + fpos.x;
+
+    if (set)
+        text[offset] |= 0x200;
+
+    graphics_clbl(fpos.x, fpos.y, 1, 1, 1);
+
+    if (set)
+        text[offset] &= 0xfdff;
+}
+
+static void blank(struct graphics_backend *backend);
+
+static void
+reset_screen_geometry(struct graphics_backend *backend)
+{
+    struct eg *eg = backend->priv;
+    struct xpm *xpm = graphics_get_splash_xpm();
+    grub_efi_graphics_output_mode_information_t *info;
+    position_t screensz;
+
+    info = eg->modes[eg->graphics_mode]->info;
+
+    if (xpm) {
+        eg->screen_pos.x =
+            (info->horizontal_resolution - xpm->width) / 2;
+        eg->screen_pos.y =
+            (info->vertical_resolution - xpm->height) / 2;
+    } else {
+        eg->screen_pos.x = 0;
+        eg->screen_pos.y = 0;
+    }
+
+    blank(backend);
+    graphics_get_screen_rowscols(&screensz);
+    graphics_clbl(0, 0, screensz.x, screensz.y, 0);
+    graphics_clbl(0, 0, screensz.x, screensz.y, 1);
+}
+
+static void
+setxy(struct graphics_backend *backend, position_t *pos)
+{
+    position_t fpos;
+
+    fpos.x = pos->x;
+    fpos.y = pos->y;
+    graphics_set_font_position(&fpos);
+}
+
+static void
+eg_getxy(struct graphics_backend *backend, position_t *pos)
+{
+    graphics_get_font_position(pos);
+}
+
+static void
+draw_pixel(struct graphics_backend *backend, position_t *pos, pixel_t *pixel)
+{
+    struct bltbuf *bltbuf = NULL;
+    grub_efi_graphics_output_blt_pixel_t *eup = (grub_efi_graphics_output_blt_pixel_t *)pixel;
+
+    bltbuf = alloc_bltbuf(1,1);
+    if (!bltbuf)
+        return;
+
+    grub_memmove(&bltbuf->pixbuf[0], eup, sizeof (*eup));
+
+    blt_to_screen_pos(backend->priv, bltbuf, pos);
+
+    grub_free(bltbuf);
+}
+
+static pixel_t *
+get_pixel_idx(struct graphics_backend *backend, int idx)
+{
+    static grub_efi_graphics_output_blt_pixel_t pixel;
+    struct eg *eg = backend->priv;
+    if (idx < 0 || idx > MAX_PALETTE)
+        return NULL;
+    pixel.red = eg->palette[idx].red;
+    pixel.green = eg->palette[idx].green;
+    pixel.blue = eg->palette[idx].blue;
+    return (pixel_t *)&pixel;
+}
+
+static pixel_t *
+get_pixel_rgb(struct graphics_backend *backend, int red, int green, int blue)
+{
+    static grub_efi_graphics_output_blt_pixel_t pixel;
+    rgb_to_pixel(red, green, blue, &pixel);
+    return &pixel;
+}
+
+static void
+set_palette(struct graphics_backend *backend, int idx,
+            int red, int green, int blue)
+{
+    grub_efi_graphics_output_blt_pixel_t pixel;
+    struct eg *eg = backend->priv;
+
+    if (idx > MAX_PALETTE)
+        return;
+    rgb_to_pixel(red, green, blue, &pixel);
+    grub_memmove(&eg->palette[idx], &pixel, sizeof pixel);
+}
+
+static void
+blank(struct graphics_backend *backend)
+{
+    struct eg *eg = backend->priv;
+    struct bltbuf *bltbuf;
+    position_t pos = {0, 0};
+    grub_efi_graphics_output_mode_information_t *info;
+    grub_efi_uintn_t x, y, i, j;
+
+    info = eg->modes[eg->graphics_mode]->info;
+    x = info->horizontal_resolution;
+    y = info->vertical_resolution;
+
+    if (x == 0 || y == 0)
+        return;
+
+    bltbuf = alloc_bltbuf(x, y);
+    for (j = 0; j < y; j++) {
+        for (i = 0; i < x; i++) {
+            pos.x = i;
+            pos.y = j;
+            bltbuf_set_pixel_rgb(bltbuf, &pos, 0x0, 0x0, 0x0);
+        }
+    }
+
+    Call_Service_10(eg->output_intf->blt, eg->output_intf, bltbuf->pixbuf,
+        GRUB_EFI_BLT_BUFFER_TO_VIDEO, 0, 0, 0, 0, x, y, 0);
+
+    grub_free(bltbuf);
+}
+
+static void
+bltbuf_cp_bl(struct bltbuf *d, position_t dpos,
+             struct bltbuf *s, position_t spos)
+{
+    grub_efi_graphics_output_blt_pixel_t *dp, *sp;
+
+    const int xavail = MAX(0, s ? s->width - spos.x : 0);
+    const int xtotal = MAX(0, d->width - dpos.x);
+    const int xcp = MAX(0, MIN(xtotal, xavail));
+    const int xcl = MAX(0, xtotal - xcp);
+
+    const int yavail = MAX(0, s ? s->height - spos.y : 0);
+    const int ytotal = MAX(0, d->height - dpos.y);
+    const int ycp = MAX(0, MIN(ytotal, yavail));
+    const int ycl = MAX(0, ytotal - ycp);
+
+    int y, x;
+
+    for (y = 0; y < ytotal; y++) {
+        dp = &d->pixbuf[(dpos.y + y) * d->width + dpos.x];
+
+        if (y < yavail) {
+            sp = &s->pixbuf[(spos.y + y) * s->width + spos.x];
+            memmove(dp, sp, xcp * sizeof (*dp));
+            dp = &d->pixbuf[(dpos.y + y) * d->width + dpos.x + xcp];
+            memset(dp, '\0', xcl * sizeof (*dp));
+        } else {
+            memset(dp, '\0', xtotal * sizeof (*dp));
+        }
+    }
+}
+
+/* copy a region the size of bltbuf from the background into bltbuf,
+ * starting at offset bgpos
+ */
+static void
+bltbuf_draw_bg(struct graphics_backend *backend, struct bltbuf *bltbuf,
+        position_t bgpos)
+{
+    struct eg *eg = backend->priv;
+    position_t blpos = { 0, 0 };
+
+    bltbuf_cp_bl(bltbuf, blpos, eg->background, bgpos);
+}
+
+static void
+dbg_dump_palette(struct graphics_backend *backend)
+{
+    struct eg *eg;
+    int i;
+    if (!backend || !backend->priv)
+        return;
+    eg = backend->priv;
+    if (!eg->palette)
+        return;
+}
+
+static int
+is_shadow_pixel(position_t screensz, position_t textpos, position_t bitpos,
+                position_t fontsz)
+{
+    unsigned short *text = graphics_get_text_buf();
+    const unsigned char *glyph;
+    position_t glyphpos = { textpos.x, textpos.y };
+    position_t glyphbit = { bitpos.x, bitpos.y };
+    unsigned short ch;
+
+    if (glyphbit.x == 0) {
+        glyphbit.x = fontsz.x;
+        glyphpos.x--;
+    }
+    if (glyphbit.y == 0) {
+        glyphbit.y = fontsz.y;
+        glyphpos.y--;
+    }
+    glyphbit.x--;
+    glyphbit.y--;
+
+    if (glyphpos.x < 0 || glyphpos.y < 0)
+        return 0;
+
+    ch = text[glyphpos.y * screensz.x + glyphpos.x] & 0xff;
+    glyph = font8x16 + (ch << 4);
+    return glyph[glyphbit.y] & (1 << ((fontsz.x-1) - glyphbit.x));
+}
+
+static void
+bltbuf_draw_character(struct graphics_backend *backend,
+        struct bltbuf *bltbuf,  /* the bltbuf to draw into */
+        position_t target,      /* the position in the bltbuf to draw to */
+        position_t fontsz,      /* the size of the font, in pixels */
+        position_t charpos,     /* the position of the character in the text
+                                   screen buffer */
+        position_t screensz,    /* the size of the screen in characters */
+        unsigned short ch       /* the character to draw, plus flags */
+    )
+{
+    struct eg *eg = backend->priv;
+    position_t blpos;
+    position_t glyphpos;
+
+    blpos.y = target.y;
+    for (glyphpos.y = 0; glyphpos.y < fontsz.y; glyphpos.y++, blpos.y++) {
+        blpos.x = target.x;
+        for (glyphpos.x = 0; glyphpos.x < fontsz.x; glyphpos.x++, blpos.x++) {
+            int invert = (ch & 0x0100) != 0;
+            int set = (ch & 0x0200) != 0;
+            const unsigned char *glyph = font8x16 + ((ch & 0xff) << 4);
+            int bit = glyph[glyphpos.y] & (1 << ((fontsz.x-1) - glyphpos.x));
+            int idx = -1;
+
+            if (set)
+                idx = bit ? 0 : 15;
+            else
+                if (invert)
+                idx = bit ? 15 : 0;
+            else if (bit)
+                idx = 15;
+
+            if (idx == -1) {
+                if (is_shadow_pixel(screensz, charpos, glyphpos, fontsz) ||
+                        !eg->background)
+                    idx = invert ? 15 : 0;
+            }
+
+            if (idx != -1)
+                bltbuf_set_pixel_idx(eg, bltbuf, &blpos, idx);
+        }
+    }
+}
+
+static void
+bltbuf_draw_text(struct graphics_backend *backend,
+        struct bltbuf *bltbuf,  /* the buffer to draw into */
+        position_t screensz,    /* the size of the screen in characters */
+        position_t fontsz,      /* the size of the font in pixels */
+        position_t txtpos,      /* the position of the text on the screen
+                                   (in characters) */
+        position_t txtsz        /* the size of the block to fill in
+                                   (in characters) */
+    )
+{
+    struct eg *eg = backend->priv;
+    unsigned short *text = graphics_get_text_buf();
+    position_t charpos;
+
+    for (charpos.y = txtpos.y; charpos.y < txtpos.y + txtsz.y; charpos.y++) {
+        for (charpos.x = txtpos.x; charpos.x < txtpos.x + txtsz.x; charpos.x++){
+            int offset = charpos.y * screensz.x + charpos.x;
+            position_t blpos = { (charpos.x-txtpos.x)*fontsz.x,
+                                 (charpos.y-txtpos.y)*fontsz.y };
+
+            bltbuf_draw_character(backend, bltbuf, blpos, fontsz, charpos,
+                    screensz, text[offset]);
+        }
+    }
+}
+
+static void
+clbl(struct graphics_backend *backend, int col, int row, int width, int height,
+        int draw_text)
+{
+    struct eg *eg = backend->priv;
+    struct xpm *xpm;
+
+    struct bltbuf *bltbuf;
+    position_t fontsz, blpos, blsz, screensz;
+    unsigned short *text;
+
+//    blank(backend);
+//
+    xpm = graphics_get_splash_xpm();
+    if (xpm && !eg->background)
+        eg->background = xpm_to_bltbuf(xpm);
+
+    graphics_get_screen_rowscols(&screensz);
+    width = MIN(width, screensz.x - col);
+    height = MIN(height, screensz.y - row);
+    graphics_get_font_size(&fontsz);
+ 
+    blsz.x = width * fontsz.x;
+    blsz.y = height * fontsz.y;
+   
+    bltbuf = alloc_bltbuf(blsz.x, blsz.y);
+    if (!bltbuf)
+        return;
+
+    blsz.x = col * fontsz.x;
+    blsz.y = row * fontsz.y;
+
+    text = graphics_get_text_buf();
+    bltbuf_draw_bg(backend, bltbuf, blsz);
+
+    if (draw_text) {
+        blsz.x = width;
+        blsz.y = height;
+        blpos.x = col;
+        blpos.y = row;
+
+        bltbuf_draw_text(backend, bltbuf, screensz, fontsz, blpos, blsz);
+    }
+
+    blpos.x = col * fontsz.x;
+    blpos.y = row * fontsz.y;
+
+    blt_to_screen_pos(eg, bltbuf, &blpos);
+}
+
+static void
+setup_cga_palette(struct eg *eg)
+{
+    rgb_to_pixel(0x00,0x00,0x00, &eg->palette[0]); //  0 Black
+    rgb_to_pixel(0x7f,0x00,0x00, &eg->palette[1]); //  1 Dark Red
+    rgb_to_pixel(0x00,0x7f,0x00, &eg->palette[2]); //  2 Dark Green
+    rgb_to_pixel(0x7f,0x7f,0x00, &eg->palette[3]); //  3 Dark Yellow
+    rgb_to_pixel(0x00,0x00,0x7f, &eg->palette[4]); //  4 Dark Blue
+    rgb_to_pixel(0x7f,0x00,0x7f, &eg->palette[5]); //  5 Dark Magenta
+    rgb_to_pixel(0x00,0x7f,0x7f, &eg->palette[6]); //  6 Dark Cyan
+    rgb_to_pixel(0xc0,0xc0,0xc0, &eg->palette[7]); //  7 Light Grey
+    rgb_to_pixel(0x7f,0x7f,0x7f, &eg->palette[8]); //  8 Dark Grey
+    rgb_to_pixel(0xff,0x00,0x00, &eg->palette[9]); //  9 Red
+    rgb_to_pixel(0x00,0xff,0x00, &eg->palette[10]); // 10 Green
+    rgb_to_pixel(0xff,0xff,0x00, &eg->palette[11]); // 11 Yellow
+    rgb_to_pixel(0x00,0x00,0xff, &eg->palette[12]); // 12 Blue
+    rgb_to_pixel(0xff,0x00,0xff, &eg->palette[13]); // 13 Magenta
+    rgb_to_pixel(0x00,0xff,0xff, &eg->palette[14]); // 14 Cyan
+    rgb_to_pixel(0xff,0xff,0xff, &eg->palette[15]); // 15 White
+    rgb_to_pixel(0xff,0xff,0xff, &eg->palette[16]); // 16 Also white ;)
+}
+
+static void disable(struct graphics_backend *backend)
+{
+    struct eg *eg;
+    
+    if (!backend)
+        return;
+    
+    eg = backend->priv;
+    if (!eg || eg->current_mode != GRAPHICS)
+        return;
+
+#if 0
+    blank(backend);
+
+    set_video_mode(eg, &eg->text_mode);
+    grub_efi_set_text_mode(1);
+#endif
+    eg->current_mode = TEXT;
+}
 
 static void
 find_bits (unsigned long mask, unsigned char *first,
@@ -173,582 +833,167 @@ fill_pixel_info (grub_pixel_info_t *pixel_info,
 }
 
 static int
-search_videomode (void)
+try_enable(struct graphics_backend *backend)
 {
-  grub_efi_graphics_output_mode_information_t *gop_info = NULL;
-  grub_efi_status_t efi_status = GRUB_EFI_SUCCESS;
-  grub_efi_uintn_t size;
-  int i;
+    struct eg *eg = backend->priv;
+    grub_efi_status_t efi_status;
+    int i;
 
-  if (gop_mode_num != -1)
+    if (eg->text_mode == 0xffffffff) {
+        grub_efi_set_text_mode(1);
+        eg->text_mode = eg->output_intf->mode->mode;
+    }
+
+    if (eg->graphics_mode == 0xffffffff) {
+        grub_efi_graphics_output_mode_information_t *info;
+
+
+        grub_efi_set_text_mode(0);
+        eg->graphics_mode = eg->output_intf->mode->mode;
+
+        info = eg->modes[eg->graphics_mode]->info;
+        if (info->horizontal_resolution < 640 ||
+                info->vertical_resolution < 480 ||
+                (info->pixel_format != GRUB_EFI_PIXEL_RGBR_8BIT_PER_COLOR &&
+                 info->pixel_format != GRUB_EFI_PIXEL_BGRR_8BIT_PER_COLOR &&
+                 info->pixel_format != GRUB_EFI_PIXEL_BIT_MASK)) {
+            for (i = 0; i < eg->max_mode; i++) {
+                info = eg->modes[i]->info;
+                if (info->horizontal_resolution < 640 ||
+                        info->vertical_resolution < 480 ||
+                        (info->pixel_format !=
+                            GRUB_EFI_PIXEL_RGBR_8BIT_PER_COLOR &&
+                         info->pixel_format != 
+                            GRUB_EFI_PIXEL_BGRR_8BIT_PER_COLOR &&
+                         info->pixel_format != GRUB_EFI_PIXEL_BIT_MASK)) {
+                    info = NULL;
+                    continue;
+                }
+                
+                if (!fill_pixel_info(&eg->pixel_info,
+                            eg->modes[eg->graphics_mode]->info) ||
+                        eg->pixel_info.depth_bits < 8) {
+                    info = NULL;
+                    continue;
+                }
+
+                efi_status = Call_Service_2(eg->output_intf->set_mode,
+                            eg->output_intf, i);
+                if (efi_status != GRUB_EFI_SUCCESS) {
+                    info = NULL;
+                    continue;
+                }
+
+                eg->graphics_mode = i;
+                break;
+            }
+        }
+
+        if (!info) {
+            grub_efi_set_text_mode(1);
+            /* this seems a bit unnecessary, but... */
+            Call_Service_2(eg->output_intf->set_mode, eg->output_intf,
+                           eg->text_mode);
+            return 0;
+        }
+    }
+    
+    eg->current_mode = GRAPHICS;
     return 1;
-  gop_intf = grub_efi_locate_protocol (&graphics_output_guid, NULL);
-  if (gop_intf == NULL)
-    {
-      return 0;
-    }
-  for (i = 0; i < gop_intf->mode->max_mode; i++)
-    {
-      efi_status = Call_Service_4 (gop_intf->query_mode,
-				   gop_intf, i, &size, &gop_info);
-      if (efi_status != GRUB_EFI_SUCCESS)
-	{
-	  return 0;
-	}
-      if (gop_info->horizontal_resolution == 640 &&
-	  gop_info->vertical_resolution == 480 &&
-	  (gop_info->pixel_format == GRUB_EFI_PIXEL_RGBR_8BIT_PER_COLOR ||
-	   gop_info->pixel_format == GRUB_EFI_PIXEL_BGRR_8BIT_PER_COLOR ||
-	   gop_info->pixel_format == GRUB_EFI_PIXEL_BIT_MASK))
-	{
-	  if (! fill_pixel_info(&gop_pixel_info, gop_info) ||
-	      gop_pixel_info.depth_bits < 8)
-	    continue;
-	  gop_mode_info = *gop_info;
-	  gop_mode_num = i;
-	  break;
-	}
-    }
-  if (gop_mode_num == -1)
-    {
-      return 0;
-    }
-
-  return 1;
 }
 
 static int
-efi_set_videomode (grub_efi_graphics_output_t *intf, int mode_num)
+enable(struct graphics_backend *backend)
 {
-  grub_efi_status_t efi_status = GRUB_EFI_SUCCESS;
+    struct eg *eg = backend->priv;
+    int i;
 
-  efi_status = Call_Service_2 (intf->set_mode, intf,
-			       mode_num);
-  return efi_status == GRUB_EFI_SUCCESS ? 0 : -1;
-}
+    if (eg) {
+        if (eg->current_mode == GRAPHICS) {
+            return 1;
+        }
+    } else {
+        grub_efi_status_t efi_status;
 
-int
-set_videomode (int mode)
-{
-  if (mode)
-    {
-      if (!search_videomode ())
-	return -1;
-      if (!grub_efi_set_text_mode (0))
-	{
-	  return -1;
-	}
-      saved_gop_mode_num = gop_intf->mode->mode;
-      if (efi_set_videomode (gop_intf, gop_mode_num))
-	{
-	  grub_efi_set_text_mode (1);
-	  saved_gop_mode_num = -1;
-	  return -1;
-	}
-      return 0;
-    }
-  else
-    {
-      if (saved_gop_mode_num != -1)
-	{
-	  efi_set_videomode (gop_intf, saved_gop_mode_num);
-	  saved_gop_mode_num = -1;
-	}
-      grub_efi_set_text_mode (1);
-      return 0;
-    }
-}
+        if (!(eg = grub_malloc(sizeof (*eg))))
+            return 0;
 
-void
-graphics_set_palette (int idx, int red, int green, int blue)
-{
-  red &= 0x3f;
-  green &= 0x3f;
-  blue &= 0x3f;
-  red = red * ((1 << gop_pixel_info.red_size) - 1) / 0x3f;
-  green = green * ((1 << gop_pixel_info.green_size) - 1) / 0x3f;
-  blue = blue * ((1 << gop_pixel_info.blue_size) - 1) / 0x3f;
-  palette[idx] = (red << gop_pixel_info.red_pos) |
-    (green << gop_pixel_info.green_pos) | (blue << gop_pixel_info.blue_pos);
-}
+        grub_memset(eg, '\0', sizeof (*eg));
 
-static void
-draw_pixel (int x, int y, int clr)
-{
-  char *fb = (char *) gop_intf->mode->frame_buffer_base;
-  char depth_bytes = gop_pixel_info.depth_bytes;
-  char *pal = (char *) &palette[clr];
+        eg->backend = backend;
+        eg->current_mode = TEXT;
+        eg->output_intf = grub_efi_locate_protocol(&graphics_output_guid, NULL);
+        if (!eg->output_intf)
+            goto fail;
 
-  fb += y * gop_pixel_info.line_length + x * depth_bytes;
-  while (depth_bytes--)
-    *fb++ = *pal++;
-}
+        eg->text_mode = eg->graphics_mode = 0xffffffff;
 
-static void
-bg_bmp_set_pixel (int x, int y, int clr)
-{
-  int c, pos;
+        eg->max_mode = eg->output_intf->mode->max_mode;
+        eg->modes = grub_malloc(eg->max_mode * sizeof (void *));
+        if (!eg->modes)
+            goto fail;
+        memset(eg->modes, '\0', eg->max_mode * sizeof (void *));
 
-  pos = (y * 640 + x) / 2;
-  c = bmp_bg[pos];
-  if (x & 1)
-    bmp_bg[pos] = (c & 0xf) | (clr << 4);
-  else
-    bmp_bg[pos] = (c & 0xf0) | clr;
-}
+        for (i = 0; i < eg->max_mode; i++) {
+            eg->modes[i] = grub_malloc(sizeof eg->modes[0]);
+            if (!eg->modes[i])
+                goto fail;
+            memset(eg->modes, '\0', sizeof (eg->modes[0]));
+            eg->modes[i]->number;
 
-static int
-bg_bmp_get_pixel (int x, int y)
-{
-  int c, pos;
+            efi_status = Call_Service_4(eg->output_intf->query_mode,
+                    eg->output_intf, i, &eg->modes[i]->size,
+                    &eg->modes[i]->info);
+            if (efi_status != GRUB_EFI_SUCCESS) {
+                grub_free(eg->modes[i]);
+                eg->modes[i] = NULL;
+                eg->max_mode = i;
+                break;
+            }
+        }
 
-  pos = (y * 640 + x) / 2;
-  c = bmp_bg[pos];
-  if (x & 1)
-    return c >> 4;
-  else
-    return c & 0xf;
-}
-
-/* Set the splash image */
-void
-graphics_set_splash (char *splashfile)
-{
-  grub_strcpy (splashimage, splashfile);
-}
-
-/* Get the current splash image */
-char *
-graphics_get_splash (void)
-{
-  return splashimage;
-}
-
-/* Initialize a vga16 graphics display with the palette based off of
- * the image in splashimage.  If the image doesn't exist, leave graphics
- * mode.  */
-int
-graphics_init ()
-{
-  bmp_bg = grub_malloc (640 * 480 / 2);
-  if (!bmp_bg)
-    {
-      current_term = term_table;
-      return 0;
-    }
-  if (!read_image (splashimage))
-    {
-      current_term = term_table;
-      return 0;
+        backend->priv = eg;
+        setup_cga_palette(eg);
+        for (i = 0; i < n_cga_colors; i++) {
+            eg->palette[i].red = cga_colors[i].red;
+            eg->palette[i].green = cga_colors[i].green;
+            eg->palette[i].blue = cga_colors[i].blue;
+        }
     }
 
-  graphics_inited = 1;
-
-  /* make sure that the highlight color is set correctly */
-  graphics_highlight_color = ((graphics_normal_color >> 4) |
-			      ((graphics_normal_color & 0xf) << 4));
-
-  return 1;
-}
-
-/* Leave graphics mode */
-void
-graphics_end (void)
-{
-  if (graphics_inited)
-    {
-      set_videomode (0);
-      grub_free (bmp_bg);
-      graphics_inited = 0;
+    if (try_enable(backend)) {
+        reset_screen_geometry(backend);
+        return 1;
     }
-}
-
-/* Print ch on the screen.  Handle any needed scrolling or the like */
-void
-graphics_putchar (int ch)
-{
-  ch &= 0xff;
-
-  graphics_cursor (0);
-
-  if (ch == '\n')
-    {
-      if (fonty + 1 < y1)
-	graphics_setxy (fontx, fonty + 1);
-      else
-	graphics_scroll ();
-      graphics_cursor (1);
-      return;
+    
+fail:
+    backend->priv = NULL;
+    if (eg->modes) {
+        for (i = 0; i < eg->max_mode; i++) {
+            if (eg->modes[i])
+                grub_free(eg->modes[i]);
+        }
+        grub_free(eg->modes);
     }
-  else if (ch == '\r')
-    {
-      graphics_setxy (x0, fonty);
-      graphics_cursor (1);
-      return;
-    }
-
-  graphics_cursor (0);
-
-  text[fonty * 80 + fontx] = ch;
-  text[fonty * 80 + fontx] &= 0x00ff;
-  if (graphics_current_color & 0xf0)
-    text[fonty * 80 + fontx] |= 0x100;
-
-  graphics_cursor (0);
-
-  if ((fontx + 1) >= x1)
-    {
-      graphics_setxy (x0, fonty);
-      if (fonty + 1 < y1)
-	graphics_setxy (x0, fonty + 1);
-      else
-	graphics_scroll ();
-    }
-  else
-    {
-      graphics_setxy (fontx + 1, fonty);
-    }
-
-  graphics_cursor (1);
-}
-
-/* get the current location of the cursor */
-int
-graphics_getxy (void)
-{
-  return (fontx << 8) | fonty;
-}
-
-void
-graphics_gotoxy (int x, int y)
-{
-  graphics_cursor (0);
-
-  graphics_setxy (x, y);
-
-  graphics_cursor (1);
-}
-
-void
-graphics_cls (void)
-{
-  int i, j, pix;
-
-  graphics_cursor (0);
-  graphics_gotoxy (x0, y0);
-
-  for (i = 0; i < 80 * 30; i++)
-    text[i] = ' ';
-  graphics_cursor (1);
-
-  for (i = 0; i < 640; i++)
-    for (j = 0; j < 480; j++)
-      {
-	pix = bg_bmp_get_pixel (i, j);
-	draw_pixel (i, j, pix);
-      }
-}
-
-void
-graphics_setcolorstate (color_state state)
-{
-  switch (state)
-    {
-    case COLOR_STATE_STANDARD:
-      graphics_current_color = graphics_standard_color;
-      break;
-    case COLOR_STATE_NORMAL:
-      graphics_current_color = graphics_normal_color;
-      break;
-    case COLOR_STATE_HIGHLIGHT:
-      graphics_current_color = graphics_highlight_color;
-      break;
-    default:
-      graphics_current_color = graphics_standard_color;
-      break;
-    }
-
-  graphics_color_state = state;
-}
-
-void
-graphics_setcolor (int normal_color, int highlight_color)
-{
-  graphics_normal_color = normal_color;
-  graphics_highlight_color = highlight_color;
-
-  graphics_setcolorstate (graphics_color_state);
-}
-
-int
-graphics_setcursor (int on)
-{
-  /* FIXME: we don't have a cursor in graphics */
-  return 0;
-}
-
-/* Open the file, and search for a valid XPM header.  Return 1 if one is found,
- * leaving the current position as the start of the next line.  Else,
- * return 0.
- */
-static int
-xpm_open (char *s)
-{
-  char buf, prev, target[] = "/* XPM */\n";
-  int pos = 0;
-
-  if (!grub_open (s))
+    grub_free(eg);
     return 0;
-
-  prev = '\n';
-  buf = 0;
-  do
-    {
-      if (grub_read (&buf, 1) != 1)
-	{
-	  grub_close ();
-	  return 0;
-	}
-      if ((pos == 0 && prev == '\n') || pos > 0)
-	{
-	  if (buf == target[pos])
-	    pos++;
-	  else
-	    pos = 0;
-	}
-      prev = buf;
-    }
-  while (target[pos]);
-  return 1;
 }
 
-/* Read in the splashscreen image and set the palette up appropriately.
- * Format of splashscreen is an xpm (can be gzipped) with 16 colors and
- * 640x480. */
-int
-read_image (char *s)
-{
-  char buf[32], pal[16];
-  char c, base;
-  unsigned i, len, idx, colors, x, y, width, height;
-
-  if (! xpm_open (s))
-    return 0;
-
-  saved_videomode = set_videomode (0x12);
-  if (saved_videomode == -1)
-    return 0;
-
-  /* parse info */
-  while (grub_read (&c, 1))
-    {
-      if (c == '"')
-	break;
-    }
-
-  while (grub_read (&c, 1) && (c == ' ' || c == '\t'))
-    ;
-
-  i = 0;
-  width = c - '0';
-  while (grub_read (&c, 1))
-    {
-      if (c >= '0' && c <= '9')
-	width = width * 10 + c - '0';
-      else
-	break;
-    }
-  while (grub_read (&c, 1) && (c == ' ' || c == '\t'))
-    ;
-
-  height = c - '0';
-  while (grub_read (&c, 1))
-    {
-      if (c >= '0' && c <= '9')
-	height = height * 10 + c - '0';
-      else
-	break;
-    }
-  while (grub_read (&c, 1) && (c == ' ' || c == '\t'))
-    ;
-
-  colors = c - '0';
-  while (grub_read (&c, 1))
-    {
-      if (c >= '0' && c <= '9')
-	colors = colors * 10 + c - '0';
-      else
-	break;
-    }
-
-  base = 0;
-  while (grub_read (&c, 1) && c != '"')
-    ;
-
-  /* palette */
-  for (i = 0, idx = 1; i < colors; i++)
-    {
-      len = 0;
-
-      while (grub_read (&c, 1) && c != '"')
-	;
-      grub_read (&c, 1);	/* char */
-      base = c;
-      grub_read (buf, 4);	/* \t c # */
-
-      while (grub_read (&c, 1) && c != '"')
-	{
-	  if (len < sizeof (buf))
-	    buf[len++] = c;
-	}
-
-      if (len == 6 && idx < 15)
-	{
-	  int r = ((hex (buf[0]) << 4) | hex (buf[1])) >> 2;
-	  int g = ((hex (buf[2]) << 4) | hex (buf[3])) >> 2;
-	  int b = ((hex (buf[4]) << 4) | hex (buf[5])) >> 2;
-
-	  pal[idx] = base;
-	  graphics_set_palette (idx, r, g, b);
-	  ++idx;
-	}
-    }
-
-  graphics_set_palette (0, (background >> 16), (background >> 8), background);
-  graphics_set_palette (15, (foreground >> 16), (foreground >> 8),
-			foreground);
-  graphics_set_palette (0x11, (border >> 16), (border >> 8), border);
-
-  x = y = len = 0;
-
-  /* parse xpm data */
-  while (y < height)
-    {
-      while (1)
-	{
-	  if (!grub_read (&c, 1))
-	    {
-	      grub_close ();
-	      return 0;
-	    }
-	  if (c == '"')
-	    break;
-	}
-
-      while (grub_read (&c, 1) && c != '"')
-	{
-	  for (i = 1; i < 15; i++)
-	    if (pal[i] == c)
-	      {
-		c = i;
-		break;
-	      }
-
-	  draw_pixel (x, y, c);
-	  bg_bmp_set_pixel (x, y, c);
-
-	  if (++x >= 640)
-	    {
-	      x = 0;
-
-	      if (y < 480)
-		len += 80;
-	      ++y;
-	    }
-	}
-    }
-
-  grub_close ();
-
-  return 1;
-}
-
-
-/* Convert a character which is a hex digit to the appropriate integer */
-int
-hex (int v)
-{
-  if (v >= 'A' && v <= 'F')
-    return (v - 'A' + 10);
-  if (v >= 'a' && v <= 'f')
-    return (v - 'a' + 10);
-  return (v - '0');
-}
-
-
-/* move the graphics cursor location to col, row */
-static void
-graphics_setxy (int col, int row)
-{
-  if (col >= x0 && col < x1)
-    {
-      fontx = col;
-    }
-  if (row >= y0 && row < y1)
-    {
-      fonty = row;
-    }
-}
-
-/* scroll the screen */
-static void
-graphics_scroll (void)
-{
-  int i, j;
-
-  /* we don't want to scroll recursively... that would be bad */
-  if (no_scroll)
-    return;
-  no_scroll = 1;
-
-  /* move everything up a line */
-  for (j = y0 + 1; j < y1; j++)
-    {
-      graphics_gotoxy (x0, j - 1);
-      for (i = x0; i < x1; i++)
-	{
-	  graphics_putchar (text[j * 80 + i]);
-	}
-    }
-
-  /* last line should be blank */
-  graphics_gotoxy (x0, y1 - 1);
-  for (i = x0; i < x1; i++)
-    graphics_putchar (' ');
-  graphics_setxy (x0, y1 - 1);
-
-  no_scroll = 0;
-}
-
-
-void
-graphics_cursor (int set)
-{
-  const unsigned char *pat;
-  int i, j, ch, x, y, bit, invert;
-
-  if (set && no_scroll)
-    return;
-
-  ch = text[fonty * 80 + fontx] & 0xff;
-  invert = (text[fonty * 80 + fontx] & 0xff00) != 0;
-  pat = font8x16 + (ch << 4);
-
-  for (i = 0; i < 16; i++)
-    {
-      for (j = 0; j < 8; j++)
-	{
-	  y = fonty * 16 + i;
-	  x = fontx * 8 + j;
-	  bit = pat[i] & (1 << (7-j));
-	  if (set)
-	    draw_pixel (x, y, bit ? 0 : 15);
-	  else if (invert)
-	    draw_pixel (x, y, bit ? 15 : 0);
-	  else
-	    draw_pixel (x, y, bit ? 15 : bg_bmp_get_pixel (x, y));
-	}
-    }
-}
+struct graphics_backend eg_backend = {
+    .name = "eg",
+    .enable = enable,
+    .disable = disable,
+    .clbl = clbl,
+    .set_palette = set_palette,
+    .get_pixel_idx = get_pixel_idx,
+    .get_pixel_rgb = get_pixel_rgb,
+    .draw_pixel = draw_pixel,
+    .reset_screen_geometry = reset_screen_geometry,
+    .get_screen_size = get_screen_size,
+    .getxy = eg_getxy,
+    .setxy = setxy,
+    .gotoxy = NULL,
+    .cursor = cursor,
+};
 
 #endif /* SUPPORT_GRAPHICS */

@@ -268,11 +268,10 @@ cmp_video_modes(struct video_mode *vm0, struct video_mode *vm1)
             vm0->vertical_resolution == vm1->vertical_resolution)
         return 0;
     if (vm1->horizontal_resolution >= vm0->horizontal_resolution &&
-            vm1->vertical_resolution >= vm1->vertical_resolution)
+            vm1->vertical_resolution >= vm0->vertical_resolution)
         return 1;
     return -1;
 }
-
 
 static int
 blt_from_screen(struct uga *uga, struct bltbuf **retbuf)
@@ -859,12 +858,12 @@ enable(struct graphics_backend *backend)
 
     if (try_enable(backend)) {
         reset_screen_geometry(backend);
-    } else {
-        backend->priv = NULL;
-        grub_free(uga);
-        return 0;
+        return 1;
     }
-    return 1;
+    
+    backend->priv = NULL;
+    grub_free(uga);
+    return 0;
 }
 
 static void disable(struct graphics_backend *backend)

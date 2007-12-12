@@ -28,14 +28,10 @@ hex (int v)
 
 
 extern struct graphics_backend uga_backend;
-#if 0
 extern struct graphics_backend eg_backend;
-#endif
 
 static struct graphics_backend *backends[] = {
-#if 0
     &eg_backend,
-#endif
     &uga_backend,
     NULL
 };
@@ -449,6 +445,7 @@ int
 graphics_init(void)
 {
     struct graphics *graphics;
+    int i;
 
     if (graphics_inited)
         return 1;
@@ -480,7 +477,8 @@ graphics_init(void)
 
     grub_memset(graphics->splashpath, '\0', sizeof (graphics->splashpath));
 
-    for(backend = backends[0]; backend; backend++) {
+    for(i = 0; backends[i] != NULL; i++) {
+        backend = backends[i];
         backend->graphics = graphics;
         if (backend->enable(backend)) {
             graphics_inited = 1;
