@@ -120,7 +120,6 @@ free_pages (void)
     }
 }
 
-extern void sleep (int secs);
 /* Allocate pages for the real mode code and the protected mode code
    for linux as well as a memory map buffer.  */
 static int
@@ -172,7 +171,6 @@ allocate_pages (grub_size_t real_size, grub_size_t prot_size)
        desc < mmap_end;
        desc = NEXT_MEMORY_DESCRIPTOR (desc, desc_size))
     {
-        sleep(1);
       /* Probably it is better to put the real mode code in the traditional
 	 space for safety.  */
       grub_printf("  desc_type = %d physical_start: %p num_pages: %ld real_mode_pages: %ld\n", desc->type, desc->physical_start, desc->num_pages, real_mode_pages);
