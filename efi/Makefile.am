@@ -1,5 +1,6 @@
 
 pkglibdir = $(libdir)/$(PACKAGE)/$(host_cpu)-$(host_vendor)
+pkgdatadir = $(datadir)/$(PACKAGE)/$(host_cpu)-$(host_vendor)
 
 if PLATFORM_EFI
 
