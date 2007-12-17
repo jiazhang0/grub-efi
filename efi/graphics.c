@@ -68,8 +68,13 @@ graphics_alloc_text_buf(void)
         graphics->text = grub_malloc(screen_size.x
                                      * screen_size.y
                                      * sizeof (graphics->text[0]));
-        if (graphics->text)
+        if (graphics->text) {
+            int x, y;
+            for (y = 0; y < screen_size.y; y++)
+                for (x = 0; x < screen_size.x; x++)
+                    graphics->text[y * screen_size.x + x] = ' ';
             return 1;
+        }
     }
     return 0;
 }
