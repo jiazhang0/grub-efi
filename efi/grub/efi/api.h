@@ -1144,25 +1144,38 @@ struct grub_efi_graphics_output_mode_information
 typedef struct grub_efi_graphics_output_mode_information
   grub_efi_graphics_output_mode_information_t;
 
-struct grub_efi_graphics_output_blt_pixel
+struct grub_efi_graphics_output_bgrr_pixel
 {
   grub_efi_uint8_t blue;
   grub_efi_uint8_t green;
   grub_efi_uint8_t red;
   grub_efi_uint8_t reserved;
 };
-typedef struct grub_efi_graphics_output_blt_pixel
+typedef struct grub_efi_graphics_output_bgrr_pixel
+  grub_efi_graphics_output_bgrr_pixel_t;
+typedef struct grub_efi_graphics_output_bgrr_pixel
   grub_efi_graphics_output_blt_pixel_t;
-typedef struct grub_efi_graphics_output_blt_pixel
+typedef struct grub_efi_graphics_output_bgrr_pixel
   grub_efi_uga_pixel_t;
 
-union grub_graphics_output_blt_pixel_union
+struct grub_efi_graphics_output_rgbr_pixel
 {
-  grub_efi_graphics_output_blt_pixel_t pixel;
-  grub_efi_uint32_t raw;;
+  grub_efi_uint8_t red;
+  grub_efi_uint8_t green;
+  grub_efi_uint8_t blue;
+  grub_efi_uint8_t reserved;
 };
-typedef union grub_graphics_output_blk_pixel_union
-  grub_graphics_output_blk_pixel_union_t;
+typedef struct grub_efi_graphics_output_rgbr_pixel
+  grub_efi_graphics_output_rgbr_pixel_t;
+
+union grub_efi_graphics_output_pixel
+{
+  grub_efi_graphics_output_rgbr_pixel_t rgbr;
+  grub_efi_graphics_output_bgrr_pixel_t bgrr;
+  grub_efi_uint32_t raw;
+};
+typedef union grub_efi_graphics_output_pixel
+  grub_efi_graphics_output_pixel_t;
 
 enum grub_efi_graphics_output_blt_operation
 {
