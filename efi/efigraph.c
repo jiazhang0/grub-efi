@@ -193,7 +193,7 @@ blt_pos_to_screen_pos(struct eg *eg, struct bltbuf *bltbuf,
 
         for (y = bltpos->y; y < bltpos->y + bltsz->y; y++, phys.y++) {
             char raw_pixels[maxpixels * pinfo->depth_bytes];
-            char *fb = (char *)eg->output_intf->mode->frame_buffer_base;
+            char *fb = (char *)(unsigned long)eg->output_intf->mode->frame_buffer_base;
             int x;
 
             pixel = (void *)&bltbuf->pixbuf[y * bltbuf->width + bltpos->x];
@@ -235,7 +235,7 @@ blt_pos_to_screen_pos(struct eg *eg, struct bltbuf *bltbuf,
     } else {
         int y;
         for (y = bltpos->y; y < bltpos->y + bltsz->y; y++, phys.y++) {
-            char *fb = (char *)eg->output_intf->mode->frame_buffer_base;
+            char *fb = (char *)(unsigned long)eg->output_intf->mode->frame_buffer_base;
             char *line = &fb[phys.y * bytestride + phys.x * sizeof(*pixel)];
             const int maxpixels =
                 MIN(info->horizontal_resolution - pos->x, bltsz->x);
