@@ -173,7 +173,6 @@ allocate_pages (grub_size_t real_size, grub_size_t prot_size)
     {
       /* Probably it is better to put the real mode code in the traditional
 	 space for safety.  */
-      grub_printf("  desc_type = %d physical_start: %p num_pages: %ld real_mode_pages: %ld\n", desc->type, desc->physical_start, desc->num_pages, real_mode_pages);
       if (desc->type == GRUB_EFI_CONVENTIONAL_MEMORY
 	  && desc->physical_start <= 0x90000
 	  && desc->num_pages >= real_mode_pages)
