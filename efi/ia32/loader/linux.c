@@ -691,6 +691,7 @@ grub_load_linux (char *kernel, char *arg)
   params->rom_config_len = 0;
 
   if (grub_le_to_cpu16 (lh->version) >= 0x0206) {
+    grub_memcpy(&params->version_0204.efi_signature, "EL32", 4);
     params->version_0206.efi_system_table = \
                         (grub_uint32_t) (unsigned long) grub_efi_system_table;
   } else if (grub_le_to_cpu16 (lh->version) >= 0x0204) {
