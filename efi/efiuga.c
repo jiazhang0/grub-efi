@@ -267,8 +267,8 @@ cmp_video_modes(struct video_mode *vm0, struct video_mode *vm1)
     if (vm0->horizontal_resolution == vm1->horizontal_resolution &&
             vm0->vertical_resolution == vm1->vertical_resolution)
         return 0;
-    if (vm1->horizontal_resolution >= vm0->horizontal_resolution &&
-            vm1->vertical_resolution >= vm0->vertical_resolution)
+    if (vm0->horizontal_resolution >= vm1->horizontal_resolution &&
+            vm0->vertical_resolution >= vm1->vertical_resolution)
         return 1;
     return -1;
 }
@@ -401,17 +401,17 @@ reset_screen_geometry(struct graphics_backend *backend)
 {
     struct uga *uga = backend->priv;
     struct xpm *xpm = graphics_get_splash_xpm();
-    position_t screensz;
+    position_t screensz = { .x = 640, .y = 480 };
 
     if (xpm) {
-        uga->screen_pos.x =
-            (uga->graphics_mode.horizontal_resolution - xpm->width) / 2;
-        uga->screen_pos.y =
-            (uga->graphics_mode.vertical_resolution - xpm->height) / 2;
-    } else {
-        uga->screen_pos.x = 0;
-        uga->screen_pos.y = 0;
+        screensz.x = xpm->width;
+        screensz.y = xpm->height;
     }
+
+    uga->screen_pos.x =
+        (uga->graphics_mode.horizontal_resolution - screensz.x) / 2;
+    uga->screen_pos.y =
+        (uga->graphics_mode.vertical_resolution - screensz.y) / 2;
 
     blank(backend);
     graphics_get_screen_rowscols(&screensz);
@@ -794,6 +794,7 @@ try_enable(struct graphics_backend *backend)
 
         if (cmp_video_modes(&uga->graphics_mode, &modes[0]) >= 0) {
             uga->current_mode = GRAPHICS;
+            graphics_alloc_text_buf();
             return 1;
         }
         for (i = 0; i < sizeof (modes) / sizeof (modes[0]); i++) {
@@ -802,6 +803,7 @@ try_enable(struct graphics_backend *backend)
             if (!cmp_video_modes(&modes[i], &mode)) {
                 grub_memmove(&uga->graphics_mode, &mode, sizeof (mode));
                 uga->current_mode = GRAPHICS;
+                graphics_alloc_text_buf();
                 return 1;
             }
         }
@@ -815,7 +817,6 @@ try_enable(struct graphics_backend *backend)
         grub_efi_set_text_mode(1);
         return 0;
     }
-   
     set_video_mode(uga, &uga->graphics_mode);
 
     uga->current_mode = GRAPHICS;
