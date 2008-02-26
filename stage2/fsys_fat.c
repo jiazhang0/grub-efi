@@ -71,6 +71,8 @@ fat_mount (void)
   
   /* Check partition type for harddisk */
   if (((current_drive & 0x80) || (current_slice != 0))
+      && (current_slice != PC_SLICE_TYPE_EXT2FS)
+      && (current_slice != PC_SLICE_TYPE_LINUX_RAID)
       && ! IS_PC_SLICE_TYPE_FAT (current_slice)
       && (! IS_PC_SLICE_TYPE_BSD_WITH_FS (current_slice, FS_MSDOS)))
     return 0;
