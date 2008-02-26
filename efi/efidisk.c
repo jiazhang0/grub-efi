@@ -280,17 +280,14 @@ name_devices (struct grub_efidisk_data *devices)
 	{
 	  if (m->read_only && m->block_size > SECTOR_SIZE)
 	    {
-	      grub_printf ("adding a cd by guessing\n");
 	      add_device (&cd_devices, d);
 	    } else
 	    {
-	      grub_printf ("adding a hd by guessing\n");
 	      add_device (&hd_devices, d);
 	    }
 	}
       if (GRUB_EFI_DEVICE_PATH_TYPE(dp) == GRUB_EFI_ACPI_DEVICE_PATH_TYPE)
 	{
-	  grub_printf ("adding a floppy by guessing\n");
 	  add_device (&fd_devices, d);
 	}
     }
