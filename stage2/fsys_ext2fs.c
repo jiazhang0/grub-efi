@@ -613,8 +613,9 @@ ext2fs_dir (char *dirname)
       /* reset indirect blocks! */
       mapblock2 = mapblock1 = -1;
 
-      raw_inode = INODE +
-	((current_ino - 1) & (EXT2_INODES_PER_BLOCK (SUPERBLOCK) - 1));
+      raw_inode = (struct ext2_inode *)((char *)INODE +
+	((current_ino - 1) & (EXT2_INODES_PER_BLOCK (SUPERBLOCK) - 1)) *
+	EXT2_INODE_SIZE (SUPERBLOCK));
 #ifdef E2DEBUG
       printf ("ipb=%d, sizeof(inode)=%d\n",
 	      EXT2_INODES_PER_BLOCK (SUPERBLOCK), EXT2_INODE_SIZE (SUPERBLOCK));
