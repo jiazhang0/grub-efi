@@ -10,6 +10,10 @@
 
 #include "graphics.h"
 
+#if 0
+#include "ugadebug.h"
+#endif
+
 int foreground = 0x00ffffff, background = 0; 
 int graphics_inited = 0;
 
