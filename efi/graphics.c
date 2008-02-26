@@ -129,12 +129,12 @@ static void
 graphics_set_splash_helper(void)
 {
     if (backend) {
-        struct xpm *xpm;
+        struct xpm *xpm = NULL;
 
         if (backend->graphics->splashimage)
             xpm_free(backend->graphics->splashimage);
 
-        if (splashpath)
+        if (splashpath[0])
             xpm = xpm_open(splashpath);
 
         if (xpm) {

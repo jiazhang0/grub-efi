@@ -140,7 +140,7 @@ main (int argc, char **argv)
   program_name = argv[0];
   default_boot_drive = boot_drive;
   default_install_partition = install_partition;
-  if (config_file)
+  if (config_file[0])
     default_config_file = config_file;
   else
     default_config_file = "NONE";
