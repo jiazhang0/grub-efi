@@ -187,12 +187,16 @@ fsb2daddr (xfs_fsblock_t fsbno)
 }
 
 #undef offsetof
+#if 0
 #define offsetof(t,m)	((int)&(((t *)0)->m))
+#else
+#define offsetof(t,m) __builtin_offsetof(t, m)
+#endif
 
-static inline int
+static inline xfs_uint64_t
 btroot_maxrecs (void)
 {
-	int tmp = icore.di_forkoff ? (icore.di_forkoff << 3) : xfs.isize;
+	xfs_uint64_t tmp = icore.di_forkoff ? (icore.di_forkoff << 3) : xfs.isize;
 
 	return (tmp - sizeof(xfs_bmdr_block_t) - offsetof(xfs_dinode_t, di_u)) /
 		(sizeof (xfs_bmbt_key_t) + sizeof (xfs_bmbt_ptr_t));
