@@ -187,11 +187,7 @@ fsb2daddr (xfs_fsblock_t fsbno)
 }
 
 #undef offsetof
-#if 0
-#define offsetof(t,m)	((int)&(((t *)0)->m))
-#else
 #define offsetof(t,m) __builtin_offsetof(t, m)
-#endif
 
 static inline xfs_uint64_t
 btroot_maxrecs (void)
