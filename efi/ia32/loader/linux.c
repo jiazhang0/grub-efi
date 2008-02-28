@@ -860,7 +860,7 @@ grub_load_initrd (char *initrd)
       if (tdesc.physical_start < addr_min
               && tdesc.num_pages > ((addr_min - tdesc.physical_start) >> 12))
         {
-          tdesc.num_pages += ((addr_min - tdesc.physical_start) >> 12);
+          tdesc.num_pages -= ((addr_min - tdesc.physical_start) >> 12);
           tdesc.physical_start = addr_min;
         }
 

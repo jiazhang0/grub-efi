@@ -772,15 +772,21 @@ grub_load_initrd (char *initrd)
       if (desc->type != GRUB_EFI_CONVENTIONAL_MEMORY)
         continue;
       memcpy(&tdesc, desc, sizeof (tdesc));
+      if (tdesc.physical_start < addr_min
+              && tdesc.num_pages > ((addr_min - tdesc.physical_start) >> 12))
+        {
+          tdesc.num_pages -= ((addr_min - tdesc.physical_start) >> 12);
+          tdesc.physical_start = addr_min;
+        }
 
       grub_dprintf(__func__, "desc = {type=%d,ps=0x%llx,vs=0x%llx,sz=%llu,attr=%llu}\n", desc->type, (unsigned long long)desc->physical_start, (unsigned long long)desc->virtual_start, (unsigned long long)desc->num_pages, (unsigned long long)desc->attribute);
-      if (desc->physical_start >= addr_min
-	  && desc->physical_start + page_align (size) <= addr_max
-	  && desc->num_pages >= initrd_pages)
+      if (tdesc.physical_start >= addr_min
+	  && tdesc.physical_start + page_align (size) <= addr_max
+	  && tdesc.num_pages >= initrd_pages)
 	{
 	  grub_efi_physical_address_t physical_end;
 
-	  physical_end = desc->physical_start + (desc->num_pages << 12);
+	  physical_end = tdesc.physical_start + (tdesc.num_pages << 12);
 	  if (physical_end > addr_max)
 	    physical_end = addr_max;
 
