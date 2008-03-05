@@ -342,7 +342,8 @@ fat_dir (char *dirname)
   /* Directories don't have a file size */
   filemax = MAXINT;
   
-  for (rest = dirname; (ch = *rest) && !isspace (ch) && ch != '/'; rest++);
+  for (rest = dirname; (ch = *rest) && !isspace (ch) && ch != '/'; rest++)
+      *rest = tolower(*rest);
   
   *rest = 0;
   
