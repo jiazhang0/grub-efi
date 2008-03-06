@@ -171,17 +171,12 @@ allocate_pages (grub_size_t real_size, grub_size_t prot_size)
        desc < mmap_end;
        desc = NEXT_MEMORY_DESCRIPTOR (desc, desc_size))
     {
-      /* Probably it is better to put the real mode code in the traditional
-	 space for safety.  */
       if (desc->type == GRUB_EFI_CONVENTIONAL_MEMORY
-	  && desc->physical_start <= 0x90000
 	  && desc->num_pages >= real_mode_pages)
 	{
 	  grub_efi_physical_address_t physical_end;
 
           physical_end = desc->physical_start + (desc->num_pages << 12);
-          if (physical_end > 0x90000)
-            physical_end = 0x90000;
 
           grub_dprintf ("linux", "physical_start = %x, physical_end = %x\n",
                         (unsigned) desc->physical_start,
