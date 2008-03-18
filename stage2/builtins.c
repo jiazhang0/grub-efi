@@ -1133,7 +1133,7 @@ displaymem_func (char *arg, int flags)
 	    str = "Usable RAM";
 	  else
 	    str = "Reserved";
-	  grub_printf ("   %s:  Base Address: 0x%lx Length: 0x$lx bytes\n",
+	  grub_printf ("   %s:  Base Address: 0x%lx Length: 0x%lx bytes\n",
 	  		str, map->BaseAddr, map->Length);
 
 	  map = ((struct AddrRangeDesc *) (((unsigned long) map) + 4 + map->size));
