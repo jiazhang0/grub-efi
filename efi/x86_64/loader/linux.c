@@ -38,7 +38,6 @@
 static unsigned long linux_mem_size;
 static int loaded;
 static void *real_mode_mem;
-static void *prot_mode_mem;
 static void *initrd_mem;
 static void *mmap_buf;
 static grub_efi_uintn_t real_mode_pages;
@@ -101,12 +100,6 @@ free_pages (void)
       real_mode_mem = 0;
     }
 
-  if (prot_mode_mem)
-    {
-      grub_efi_free_pages ((grub_addr_t) prot_mode_mem, prot_mode_pages);
-      prot_mode_mem = 0;
-    }
-
   if (initrd_mem)
     {
       grub_efi_free_pages ((grub_addr_t) initrd_mem, initrd_pages);
@@ -148,7 +141,6 @@ allocate_pages (grub_size_t real_size, grub_size_t prot_size)
 
   /* Initialize the memory pointers with NULL for convenience.  */
   real_mode_mem = 0;
-  prot_mode_mem = 0;
   mmap_buf = 0;
 
   /* Read the memory map temporarily, to find free space.  */
@@ -208,16 +200,6 @@ allocate_pages (grub_size_t real_size, grub_size_t prot_size)
     {
       grub_printf("cannot allocate efi mmap pages");
       errnum = ERR_WONT_FIT;
-      goto fail;
-    }
-
-  /* Next, find free pages for the protected mode code.  */
-  /* XXX what happens if anything is using this address?  */
-  prot_mode_mem = grub_efi_allocate_pages (0x100000, prot_mode_pages);
-  if (! prot_mode_mem)
-    {
-      errnum = ERR_WONT_FIT;
-      grub_printf ("cannot allocate protected mode pages");
       goto fail;
     }
 
@@ -743,15 +725,8 @@ grub_load_initrd (char *initrd)
     addr_max = linux_mem_size;
   addr_max &= ~((1 << 12)-1);
 
-  /* Linux 2.3.xx has a bug in the memory range check, so avoid
-     the last page.
-     Linux 2.2.xx has a bug in the memory range check, which is
-     worse than that of Linux 2.3.xx, so avoid the last 64kb.  */
-  //addr_max -= 0x10000;
-
   /* Usually, the compression ratio is about 50%.  */
-  addr_min = (grub_addr_t) prot_mode_mem + ((prot_mode_pages * 3) << 12);
-  grub_dprintf(__func__, "prot_mode_mem=%p prot_mode_pages=%lu\n", prot_mode_mem, prot_mode_pages);
+  addr_min = 0;
 
   /* Find the highest address to put the initrd.  */
   mmap_size = find_mmap_size ();
