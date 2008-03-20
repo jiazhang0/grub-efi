@@ -86,6 +86,7 @@ struct grub_linux_kernel_header
   grub_uint32_t kernel_alignment;
   grub_uint8_t relocatable_kernel;
   grub_uint8_t pad2[3];
+  grub_uint32_t cmdline_size;
   grub_uint32_t hardware_subarch;
   grub_uint64_t hardware_subarch_data;
 } __attribute__ ((packed));
@@ -136,8 +137,9 @@ struct linux_kernel_params
   grub_uint16_t vesapm_offset;	/* 30 */
   grub_uint16_t lfb_pages;	/* 32 */
   grub_uint16_t vesa_attrib;	/* 34 */
+  grub_uint32_t capabilities;   /* 36 */
 
-  grub_uint8_t padding3[0x40 - 0x36];
+  grub_uint8_t padding3[0x40 - 0x3a];
 
   grub_uint16_t apm_version;	/* 40 */
   grub_uint16_t apm_code_segment;	/* 42 */
