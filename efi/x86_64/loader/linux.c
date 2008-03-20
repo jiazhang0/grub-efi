@@ -28,6 +28,8 @@
 
 #include <shared.h>
 
+#define VIDEO_TYPE_EFI     0x70    /* EFI graphic mode */
+
 #define grub_file_size()    filemax
 
 #define NEXT_MEMORY_DESCRIPTOR(desc, size)      \
@@ -349,7 +351,7 @@ set_video_params (struct linux_kernel_params *params)
   params->video_width = (grub_console_getwh () >> 8);
   params->video_ega_bx = 0;
   params->video_height = (grub_console_getwh () & 0xff);
-  params->have_vga = 0;
+  params->have_vga = VIDEO_TYPE_EFI;
   params->font_size = 16; /* XXX */
 #endif
   return;
@@ -362,7 +364,7 @@ set_video_params (struct linux_kernel_params *params)
   params->video_width = (grub_console_getwh () >> 8);
   params->video_ega_bx = 0;
   params->video_height = (grub_console_getwh () & 0xff);
-  params->have_vga = 0;
+  params->have_vga = VIDEO_TYPE_EFI;
   params->font_size = 16; /* XXX */
 
   /* No VBE.  */
