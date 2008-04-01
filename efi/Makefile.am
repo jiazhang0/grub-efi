@@ -69,7 +69,7 @@ RELOC_FLAGS = $(STAGE2_CFLAGS) -I$(top_srcdir)/stage1 \
 	$(HERCULES_FLAGS) $(GRAPHICS_FLAGS)
 
 noinst_LIBRARIES = libgrubefi.a
-libgrubefi_a_SOURCES = $(EFI_ARCH)/callwrap.S eficore.c efimm.c efimisc.c \
+libgrubefi_a_SOURCES = $(EFI_ARCH)/callwrap.c eficore.c efimm.c efimisc.c \
 	$(EFI_ARCH)/setjmp.S eficon.c efidisk.c graphics.c efigraph.c efiuga.c \
 	font_8x16.c efiserial.c $(EFI_ARCH)/loader/linux.c efichainloader.c \
 	xpm.c
