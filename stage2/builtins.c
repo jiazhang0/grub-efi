@@ -56,6 +56,7 @@ static int bootdev;
 /* True when the debug mode is turned on, and false
    when it is turned off.  */
 int debug = 0;
+int debug_graphics = 0;
 /* The default entry.  */
 int default_entry = 0;
 /* The fallback entry.  */
@@ -796,14 +797,18 @@ static struct builtin builtin_configfile =
 static int
 debug_func (char *arg, int flags)
 {
-  if (debug)
+  int *debugwhich = &debug;
+  if (arg && !strcmp(arg, "--graphics"))
+    debugwhich = &debug_graphics;
+
+  if (*whichdebug)
     {
-      debug = 0;
+      *whichdebug = 0;
       grub_printf (" Debug mode is turned off\n");
     }
   else
     {
-      debug = 1;
+      *whichdebug = 1;
       grub_printf (" Debug mode is turned on\n");
     }
 
@@ -814,7 +819,7 @@ static struct builtin builtin_debug =
 {
   "debug",
   debug_func,
-  BUILTIN_CMDLINE,
+  BUILTIN_CMDLINE | BUILTIN_MENU,
   "debug",
   "Turn on/off the debug mode."
 };

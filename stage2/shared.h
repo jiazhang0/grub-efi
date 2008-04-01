@@ -632,6 +632,7 @@ extern void (*disk_read_func) (int, int, int);
 #ifndef STAGE1_5
 /* The flag for debug mode.  */
 extern int debug;
+extern int debug_graphics;
 #endif /* STAGE1_5 */
 
 extern unsigned long current_drive;
