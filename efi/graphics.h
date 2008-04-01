@@ -3,7 +3,10 @@
 
 #ifdef SUPPORT_GRAPHICS
 
+#include <term.h>
 #include "xpm.h"
+
+#define VIDEO_TYPE_EFI 0x70
 
 typedef void pixel_t;
 struct graphics;
@@ -14,6 +17,8 @@ struct position {
 };
 typedef struct position position_t;
 
+extern grub_uint16_t grub_console_getwh (void);
+extern void graphics_set_kernel_params(struct linux_kernel_params *params);
 extern void graphics_set_font_position(position_t *pos);
 extern void graphics_get_font_position(position_t *pos);
 extern void graphics_get_font_size(position_t *size);
@@ -43,6 +48,9 @@ struct graphics_backend {
 
     int (*enable)(struct graphics_backend *backend);
     void (*disable)(struct graphics_backend *backend);
+
+    void (*set_kernel_params)(struct graphics_backend *backend,
+            struct linux_kernel_params *params);
 
     void (*clbl)(struct graphics_backend *backend, int col, int row,
     						   int width, int height,

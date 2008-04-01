@@ -23,6 +23,9 @@
 
 #ifdef SUPPORT_GRAPHICS
 
+#include <grub/misc.h>
+#include <grub/types.h>
+#include <grub/cpu/linux.h>
 #include <grub/efi/api.h>
 #include <grub/efi/efi.h>
 #include <grub/misc.h>
@@ -115,6 +118,33 @@ static grub_efi_uga_pixel_t cga_colors[] = {
 };
 
 static const int n_cga_colors = sizeof (cga_colors) / sizeof (cga_colors[0]);
+
+static void
+set_kernel_params(struct graphics_backend *backend,
+            struct linux_kernel_params *params)
+{
+    struct uga *uga;
+    
+    if (!backend || !backend->priv)
+        return;
+
+    uga = backend->priv;
+    if (uga->current_mode != GRAPHICS)
+        return;
+
+    params->lfb_width = uga->graphics_mode.horizontal_resolution;
+    params->lfb_height = uga->graphics_mode.vertical_resolution;
+    params->lfb_depth = 32;
+    params->red_mask_size = 8;
+    params->red_field_pos = 16;
+    params->green_mask_size = 8;
+    params->green_field_pos = 8;
+    params->blue_mask_size = 8;
+    params->blue_field_pos = 0;
+    params->reserved_mask_size = 8;
+    params->reserved_field_pos = 24;
+    params->have_vga = VIDEO_TYPE_EFI;
+}
 
 static void
 pixel_to_rgb(grub_efi_uga_pixel_t *pixel, int *red, int *green, int *blue)
@@ -891,6 +921,7 @@ struct graphics_backend uga_backend = {
     .name = "uga",
     .enable = enable,
     .disable = disable,
+    .set_kernel_params = set_kernel_params,
     .clbl = clbl,
     .set_palette = set_palette,
     .get_pixel_idx = get_pixel_idx,

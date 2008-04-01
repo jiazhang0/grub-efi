@@ -1,5 +1,8 @@
 #ifdef SUPPORT_GRAPHICS
 
+#include <grub/misc.h>
+#include <grub/types.h>
+#include <grub/cpu/linux.h>
 #include <grub/efi/api.h>
 #include <grub/efi/efi.h>
 #include <grub/misc.h>
@@ -28,7 +31,23 @@ hex (int v)
   return (v - '0');
 }
 
+grub_uint16_t
+grub_console_getwh (void)
+{
+  grub_efi_simple_text_output_interface_t *o;
+  grub_efi_uintn_t columns, rows;
 
+  o = grub_efi_system_table->con_out;
+  if (Call_Service_4 (o->query_mode , o, o->mode->mode, &columns, &rows)
+      != GRUB_EFI_SUCCESS)
+    {
+      /* Why does this fail?  */
+      columns = 80;
+      rows = 25;
+    }
+
+  return ((columns << 8) | rows);
+}
 
 extern struct graphics_backend uga_backend;
 extern struct graphics_backend eg_backend;
@@ -56,6 +75,43 @@ struct graphics {
 
     unsigned short *text;
 };
+
+void
+graphics_set_kernel_params(struct linux_kernel_params *params)
+{
+    params->video_cursor_x = grub_efi_system_table->con_out->mode->cursor_column;
+    params->video_cursor_y = grub_efi_system_table->con_out->mode->cursor_row;
+    params->video_page = 0; /* ??? */
+    params->video_mode = grub_efi_system_table->con_out->mode->mode;
+    params->video_width = (grub_console_getwh () >> 8);
+    params->video_ega_bx = 0;
+    params->video_height = (grub_console_getwh () & 0xff);
+    params->have_vga = 0;
+    params->font_size = 16; /* XXX */
+
+    /* No VBE.  */
+    params->lfb_width = 0;
+    params->lfb_height = 0;
+    params->lfb_depth = 0;
+    params->lfb_base = 0;
+    params->lfb_size = 0;
+    params->lfb_line_len = 0;
+    params->red_mask_size = 0;
+    params->red_field_pos = 0;
+    params->green_mask_size = 0;
+    params->green_field_pos = 0;
+    params->blue_mask_size = 0;
+    params->blue_field_pos = 0;
+    params->reserved_mask_size = 0;
+    params->reserved_field_pos = 0;
+    params->vesapm_segment = 0;
+    params->vesapm_offset = 0;
+    params->lfb_pages = 0;
+    params->vesa_attrib = 0;
+
+    if (backend && backend->set_kernel_params)
+        backend->set_kernel_params(backend, params);
+}
 
 int
 graphics_alloc_text_buf(void)
