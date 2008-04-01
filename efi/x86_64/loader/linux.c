@@ -28,7 +28,7 @@
 
 #include <shared.h>
 
-#define VIDEO_TYPE_EFI     0x70    /* EFI graphic mode */
+#include "graphics.h"
 
 #define grub_file_size()    filemax
 
@@ -214,180 +214,6 @@ allocate_pages (grub_size_t real_size, grub_size_t prot_size)
   return 0;
 }
 
-static void
-find_bits (unsigned long mask, unsigned char *first,
-	   unsigned char* len)
-{
-  unsigned char bit_pos = 0, bit_len = 0;
-  *first =0;
-  *len = 0;
-  if (mask == 0)
-    return;
-  while (! (mask & 0x1)) {
-    mask = mask >> 1;
-    bit_pos++;
-  }
-  while (mask & 0x1) {
-    mask = mask >> 1;
-    bit_len++;
-  }
-  *first = bit_pos;
-  *len = bit_len;
-}
-
-static grub_uint16_t
-grub_console_getwh (void)
-{
-  grub_efi_simple_text_output_interface_t *o;
-  grub_efi_uintn_t columns, rows;
-
-  o = grub_efi_system_table->con_out;
-  if (Call_Service_4 (o->query_mode , o, o->mode->mode, &columns, &rows)
-      != GRUB_EFI_SUCCESS)
-    {
-      /* Why does this fail?  */
-      columns = 80;
-      rows = 25;
-    }
-
-  return ((columns << 8) | rows);
-}
-
-static void
-set_video_params (struct linux_kernel_params *params)
-{
-  grub_efi_uintn_t size;
-  grub_efi_graphics_output_t *gop_intf = NULL;
-  grub_efi_graphics_output_mode_information_t *gop_info = NULL;
-  grub_efi_graphics_output_mode_t *gop_mode = NULL;
-  grub_efi_status_t efi_status = GRUB_EFI_SUCCESS;
-
-  gop_intf = grub_efi_locate_protocol (&graphics_output_guid, NULL);
-  if (gop_intf == NULL)
-    goto fallback;
-  gop_mode = gop_intf->mode;
-  efi_status = Call_Service_4 (gop_intf->query_mode,
-			       gop_intf, gop_mode->mode, &size, &gop_info);
-  if (efi_status != GRUB_EFI_SUCCESS)
-    goto fallback;
-
-  /* No VBE on EFI.  */
-  params->lfb_width = gop_info->horizontal_resolution;
-  params->lfb_height = gop_info->vertical_resolution;
-  params->lfb_base = gop_mode->frame_buffer_base;
-  params->lfb_size = gop_mode->frame_buffer_size;
-  params->lfb_pages = 1;
-  params->vesapm_segment = 0;
-  params->vesapm_offset = 0;
-  params->vesa_attrib = 0;
-  if (gop_info->pixel_format == GRUB_EFI_PIXEL_RGBR_8BIT_PER_COLOR)
-    {
-      params->lfb_depth = 32;
-      params->red_mask_size = 8;
-      params->red_field_pos = 0;
-      params->green_mask_size = 8;
-      params->green_field_pos = 8;
-      params->blue_mask_size = 8;
-      params->blue_field_pos = 16;
-      params->reserved_mask_size = 8;
-      params->reserved_field_pos = 24;
-      params->lfb_line_len = gop_info->pixels_per_scan_line * 4;
-    }
-  else if (gop_info->pixel_format == GRUB_EFI_PIXEL_BGRR_8BIT_PER_COLOR)
-    {
-      params->lfb_depth = 32;
-      params->red_mask_size = 8;
-      params->red_field_pos = 16;
-      params->green_mask_size = 8;
-      params->green_field_pos = 8;
-      params->blue_mask_size = 8;
-      params->blue_field_pos = 0;
-      params->reserved_mask_size = 8;
-      params->reserved_field_pos = 24;
-      params->lfb_line_len = gop_info->pixels_per_scan_line * 4;
-    }
-  else if (gop_info->pixel_format == GRUB_EFI_PIXEL_BIT_MASK)
-    {
-      find_bits (gop_info->pixel_information.red_mask,
-		 &params->red_field_pos, &params->red_mask_size);
-      find_bits (gop_info->pixel_information.green_mask,
-		 &params->green_field_pos, &params->green_mask_size);
-      find_bits (gop_info->pixel_information.blue_mask,
-		 &params->blue_field_pos, &params->blue_mask_size);
-      find_bits (gop_info->pixel_information.reserved_mask,
-		 &params->reserved_field_pos, &params->reserved_mask_size);
-      params->lfb_depth = params->red_mask_size + params->green_mask_size +
-	params->blue_mask_size + params->reserved_mask_size;
-      params->lfb_line_len = (gop_info->pixels_per_scan_line * params->lfb_depth) / 8;
-    }
-  else
-    {
-      params->lfb_depth = 4;
-      params->red_mask_size = 0;
-      params->red_field_pos = 0;
-      params->green_mask_size = 0;
-      params->green_field_pos = 0;
-      params->blue_mask_size = 0;
-      params->blue_field_pos = 0;
-      params->reserved_mask_size = 0;
-      params->reserved_field_pos = 0;
-      params->lfb_line_len = params->lfb_width / 2;
-    }
-#if 0
-  params->video_cursor_x = 0;
-  params->video_cursor_y = 0;
-  params->video_page = 0;
-  params->video_mode = 0;
-  params->video_width = 0;
-  params->video_ega_bx = 0;
-  params->video_height = 0;
-  params->have_vga = 0x70;
-  params->font_size = 0;
-#else
-  params->video_cursor_x = grub_efi_system_table->con_out->mode->cursor_column;
-  params->video_cursor_y = grub_efi_system_table->con_out->mode->cursor_row;
-  params->video_page = 0; /* ??? */
-  params->video_mode = grub_efi_system_table->con_out->mode->mode;
-  params->video_width = (grub_console_getwh () >> 8);
-  params->video_ega_bx = 0;
-  params->video_height = (grub_console_getwh () & 0xff);
-  params->have_vga = VIDEO_TYPE_EFI;
-  params->font_size = 16; /* XXX */
-#endif
-  return;
-
- fallback:
-  params->video_cursor_x = grub_efi_system_table->con_out->mode->cursor_column;
-  params->video_cursor_y = grub_efi_system_table->con_out->mode->cursor_row;
-  params->video_page = 0; /* ??? */
-  params->video_mode = grub_efi_system_table->con_out->mode->mode;
-  params->video_width = (grub_console_getwh () >> 8);
-  params->video_ega_bx = 0;
-  params->video_height = (grub_console_getwh () & 0xff);
-  params->have_vga = VIDEO_TYPE_EFI;
-  params->font_size = 16; /* XXX */
-
-  /* No VBE.  */
-  params->lfb_width = 0;
-  params->lfb_height = 0;
-  params->lfb_depth = 0;
-  params->lfb_base = 0;
-  params->lfb_size = 0;
-  params->lfb_line_len = 0;
-  params->red_mask_size = 0;
-  params->red_field_pos = 0;
-  params->green_mask_size = 0;
-  params->green_field_pos = 0;
-  params->blue_mask_size = 0;
-  params->blue_field_pos = 0;
-  params->reserved_mask_size = 0;
-  params->reserved_field_pos = 0;
-  params->vesapm_segment = 0;
-  params->vesapm_offset = 0;
-  params->lfb_pages = 0;
-  params->vesa_attrib = 0;
-}
-
 /* do some funky stuff, then boot linux */
 void
 linux_boot (void)
@@ -409,7 +235,7 @@ big_linux_boot (void)
 
   params = real_mode_mem;
 
-  set_video_params (params);
+  graphics_set_kernel_params (params);
 
   mmap_size = find_mmap_size ();
   if (grub_efi_get_memory_map (&mmap_size, mmap_buf, &map_key,

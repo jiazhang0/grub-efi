@@ -679,6 +679,7 @@ blank(struct graphics_backend *backend)
     position_t pos = {0, 0};
     grub_efi_graphics_output_mode_information_t *info;
     grub_efi_uintn_t x, y, i, j;
+    unsigned char r = 0 ,g = 0;
 
     info = eg->modes[eg->graphics_mode]->info;
     x = info->horizontal_resolution;
@@ -689,7 +690,15 @@ blank(struct graphics_backend *backend)
 
     bltbuf = alloc_bltbuf(x, y);
     for (j = 0; j < y; j++) {
+        if (debug_graphics && j % 16 == 0) {
+            g = g == 0 ? 7 : 0;
+            r = g == 0 ? 7 : 0;
+        }
         for (i = 0; i < x; i++) {
+            if (debug_graphics && i % 16 == 0) {
+                g = g == 0 ? 7 : 0;
+                r = g == 0 ? 7 : 0;
+            }
             pos.x = i;
             pos.y = j;
             bltbuf_set_pixel_rgb(bltbuf, &pos, 0x0, 0x0, 0x0);
@@ -697,8 +706,6 @@ blank(struct graphics_backend *backend)
     }
 
     blt_to_screen(eg, bltbuf);
-//    Call_Service_10(eg->output_intf->blt, eg->output_intf, bltbuf->pixbuf,
-//        GRUB_EFI_BLT_BUFFER_TO_VIDEO, 0, 0, 0, 0, x, y, 0);
 
     grub_free(bltbuf);
 }
