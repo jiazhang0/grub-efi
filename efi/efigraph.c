@@ -701,7 +701,7 @@ blank(struct graphics_backend *backend)
             }
             pos.x = i;
             pos.y = j;
-            bltbuf_set_pixel_rgb(bltbuf, &pos, 0x0, 0x0, 0x0);
+            bltbuf_set_pixel_rgb(bltbuf, &pos, r * 16, g * 16, 0x0);
         }
     }
 
