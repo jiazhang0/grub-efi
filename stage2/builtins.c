@@ -797,9 +797,9 @@ static struct builtin builtin_configfile =
 static int
 debug_func (char *arg, int flags)
 {
-  int *debugwhich = &debug;
+  int *whichdebug = &debug;
   if (arg && !strcmp(arg, "--graphics"))
-    debugwhich = &debug_graphics;
+    whichdebug = &debug_graphics;
 
   if (*whichdebug)
     {
