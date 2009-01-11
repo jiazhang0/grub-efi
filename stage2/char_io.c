@@ -1350,6 +1350,57 @@ grub_strlen (const char *str)
 
   return len;
 }
+
+/* this function "borrowed" from dietlibc */
+int
+grub_strspn(const char *s, const char *accept)
+{
+  int l=0;
+  int a=1,i,al=grub_strlen(accept);
+
+  while((a)&&(*s))
+  {
+    for(a=i=0;(!a)&&(i<al);i++)
+      if (*s==accept[i]) a=1;
+    if (a) l++;
+    s++;
+  }
+  return l;
+}
+
+/* this function "borrowed" from dietlibc */
+int
+grub_strcspn(const char *s, const char *reject)
+{
+  int l=0;
+  int a=1,i,al=grub_strlen(reject);
+
+  while((a)&&(*s))
+  {
+    for(i=0;(a)&&(i<al);i++)
+      if (*s==reject[i]) a=0;
+    if (a) l++;
+    s++;
+  }
+  return l;
+}
+
+/* this function "borrowed" from dietlibc */
+char *
+grub_strtok_r(char *s, const char *delim, char **ptrptr) {
+  char *tmp=0;
+
+  if (s==0) s=*ptrptr;
+  s+=grub_strspn(s,delim);           /* overread leading delimiter */
+  if (*s) {
+    tmp=s;
+    s+=grub_strcspn(s,delim);
+    if (*s) *s++=0;   /* not the end ? => terminate it */
+  }
+  *ptrptr=s;
+  return tmp;
+}
+
 #endif /* ! STAGE1_5 */
 
 #ifdef GRUB_UTIL
