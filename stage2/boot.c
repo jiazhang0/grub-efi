@@ -228,6 +228,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
     {
       int big_linux = 0;
       int setup_sects = lh->setup_sects;
+      int cmdline_size = 0xff;
 
       if (lh->header == LINUX_MAGIC_SIGNATURE && lh->version >= 0x0200)
 	{
@@ -255,6 +256,14 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
 	      lh->cl_offset = LINUX_CL_OFFSET;
 	      lh->setup_move_size = LINUX_SETUP_MOVE_SIZE;
 	    }
+
+	  if (lh->version >= 0x0206)
+	    {
+	      cmdline_size = lh->cmdline_size;
+	      if (cmdline_size > (LINUX_CL_END_OFFSET - LINUX_CL_OFFSET))
+		cmdline_size = LINUX_CL_END_OFFSET - LINUX_CL_OFFSET;
+	    }
+
 	}
       else
 	{
@@ -412,7 +421,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
 	    char *src = skip_to (0, arg);
 	    char *dest = linux_data_tmp_addr + LINUX_CL_OFFSET;
 	
-	    while (dest < linux_data_tmp_addr + LINUX_CL_END_OFFSET && *src)
+	    while (dest < linux_data_tmp_addr + LINUX_CL_OFFSET + cmdline_size && *src)
 	      *(dest++) = *(src++);
 	
 	    /* Old Linux kernels have problems determining the amount of
@@ -433,7 +442,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
 	    if (! grub_strstr (arg, "mem=")
 		&& ! (load_flags & KERNEL_LOAD_NO_MEM_OPTION)
 		&& lh->version < 0x0203		/* kernel version < 2.4.18 */
-		&& dest + 15 < linux_data_tmp_addr + LINUX_CL_END_OFFSET)
+		&& dest + 15 < linux_data_tmp_addr + LINUX_CL_OFFSET + cmdline_size)
 	      {
 		*dest++ = ' ';
 		*dest++ = 'm';

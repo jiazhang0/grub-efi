@@ -161,8 +161,8 @@ extern void *grub_scratch_mem;
 #define LINUX_VID_MODE_ASK		0xFFFD
 
 #define LINUX_CL_OFFSET			0x9000
-#define LINUX_CL_END_OFFSET		0x90FF
-#define LINUX_SETUP_MOVE_SIZE		0x9100
+#define LINUX_CL_END_OFFSET		0x97FF
+#define LINUX_SETUP_MOVE_SIZE		0x9800
 #define LINUX_CL_MAGIC			0xA33F
 
 /*
@@ -422,6 +422,9 @@ struct linux_kernel_header
   unsigned short pad1;			/* Unused */
   char *cmd_line_ptr;			/* Points to the kernel command line */
   unsigned int initrd_addr_max;		/* The highest address of initrd */
+  unsigned int kernel_alignment;	/* Physical addr alignment required for kernel */
+  unsigned int relocatable_kernel;	/* Whether kernel is relocatable or not */
+  unsigned int cmdline_size;		/* Maximum size of the kernel command line */
 } __attribute__ ((packed));
 
 /* Memory map address range descriptor used by GET_MMAP_ENTRY. */
