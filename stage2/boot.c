@@ -815,7 +815,8 @@ load_initrd (char *initrd)
 #endif
   return grub_load_initrd (initrd);
 #else
-  int len;
+  int len, next_addr;
+  char *singleimage, *pos;
   unsigned long moveto;
   unsigned long max_addr;
   struct linux_kernel_header *lh
@@ -824,16 +825,24 @@ load_initrd (char *initrd)
 #ifndef NO_DECOMPRESSION
   no_decompression = 1;
 #endif
-  
-  if (! grub_open (initrd))
-    goto fail;
+  len = 0;
+  next_addr = cur_addr;
 
-  len = grub_read ((char *) cur_addr, -1);
-  if (! len)
-    {
-      grub_close ();
-      goto fail;
-    }
+  /* loop over all initrd images and concatenate them in memory */
+  singleimage = strtok_r(initrd," \t",&pos);
+  while (singleimage) {
+    if (! grub_open (singleimage))
+      continue;
+
+    len += grub_read ((char *) next_addr, -1);
+    grub_close ();
+
+    next_addr = cur_addr + len;
+    singleimage = strtok_r(NULL," \t",&pos);
+  }
+
+  if (!len)
+    goto fail;
 
   if (linux_mem_size)
     moveto = linux_mem_size;
@@ -863,7 +872,6 @@ load_initrd (char *initrd)
   lh->ramdisk_image = RAW_ADDR (moveto);
   lh->ramdisk_size = len;
 
-  grub_close ();
 
  fail:
   
