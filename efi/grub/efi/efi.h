@@ -25,6 +25,12 @@
 #include <grub/efi/api.h>
 
 /* Functions.  */
+grub_efi_status_t
+grub_efi_locate_handle_buffer (grub_efi_locate_search_type_t search_type,
+				grub_efi_guid_t *protocol,
+				void *search_key,
+				grub_efi_uintn_t *no_handles,
+				grub_efi_handle_t **buffer);
 void *grub_efi_locate_protocol (grub_efi_guid_t * protocol,
 				void *registration);
 grub_efi_handle_t *grub_efi_locate_handle (grub_efi_locate_search_type_t

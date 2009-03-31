@@ -489,11 +489,15 @@ grub_set_config_file (char *path_name)
       grub_strcpy (saved_default_file, DEFAULT_SAVED_DEFAULT_FILE_NAME);
       return;
     }
-  path_name_len = dir_end + 1 - path_name;
-  if (path_name_len + sizeof (DEFAULT_CONFIG_FILE_NAME) > 128)
-    return;
-  grub_memmove (config_file, path_name, path_name_len);
-  grub_strcpy (config_file + path_name_len, DEFAULT_CONFIG_FILE_NAME);
+  if (strlen(dir_end) == 1) {
+    path_name_len = dir_end + 1 - path_name;
+    if (path_name_len + sizeof (DEFAULT_CONFIG_FILE_NAME) > 128)
+      return;
+    grub_memmove (config_file, path_name, path_name_len);
+    grub_strcpy (config_file + path_name_len, DEFAULT_CONFIG_FILE_NAME);
+  } else {
+    grub_memmove (config_file, path_name, path_name_len+1);
+  }
   if (path_name_len + sizeof (DEFAULT_SAVED_DEFAULT_FILE_NAME) > 128)
     return;
   path_name_len = dir_end + 1 - path_name;

@@ -15,5 +15,5 @@ AM_CPPFLAGS = -DGRUB_UTIL=1 -DFSYS_EXT2FS=1 -DFSYS_FAT=1 -DFSYS_FFS=1 \
 
 AM_CFLAGS = $(GRUB_CFLAGS)
 
-grub_SOURCES = main.c asmstub.c
+grub_SOURCES = main.c asmstub.c efitftp.c
 grub_LDADD = ../stage2/libgrub.a  ../lib/libcommon.a $(GRUB_LIBS)

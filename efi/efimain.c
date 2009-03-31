@@ -24,6 +24,9 @@
 #include <grub/misc.h>
 
 #include <shared.h>
+#include <efistubs.h>
+
+#include "pxe.h"
 
 #define GRUB_SCRATCH_MEM_PAGES  (GRUB_SCRATCH_MEM_SIZE >> 12)
 
@@ -34,25 +37,41 @@ void *grub_scratch_mem = NULL;
 #define LOW_STACK_PAGES (LOW_STACK_SIZE >> 12)
 static void *low_stack, *real_stack;
 
+extern int grub_test_pxe(grub_efi_loaded_image_t *loaded_image);
+
 static void
 real_main (void)
 {
   grub_efi_loaded_image_t *loaded_image;
-  char *path_name;
+  char *path_name = NULL;
 
   loaded_image = grub_efi_get_loaded_image (grub_efi_image_handle);
-  grub_get_drive_partition_from_bdev_handle (loaded_image->device_handle,
-					     &boot_drive,
-					     &install_partition);
-  path_name = grub_efi_file_path_to_path_name (loaded_image->file_path);
-  if (path_name)
-    {
-      grub_set_config_file (path_name);
-      grub_free (path_name);
-    }
-  grub_load_saved_default (loaded_image->device_handle);
+
+  path_name = grub_efi_pxe_get_config_path(loaded_image);
+
+  if (path_name) {
+    network_ready = 1;
+
+    grub_set_config_file (path_name);
+    grub_free (path_name);
+  } else {
+      grub_get_drive_partition_from_bdev_handle (loaded_image->device_handle,
+						 &boot_drive,
+						 &install_partition);
+      path_name = grub_efi_file_path_to_path_name (loaded_image->file_path);
+
+    if (path_name)
+      {
+        grub_set_config_file (path_name);
+        grub_free (path_name);
+      }
+
+    grub_load_saved_default (loaded_image->device_handle);
+  }
 
   init_bios_info ();
+  while (console_getkey() < 0)
+    grub_efi_stall(1000);
 }
 
 grub_efi_status_t

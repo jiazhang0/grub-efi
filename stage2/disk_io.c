@@ -28,6 +28,10 @@
 # include <etherboot.h>
 #endif
 
+#ifdef PLATFORM_EFI
+#include "efistubs.h"
+#endif
+
 #ifdef GRUB_UTIL
 # include <device.h>
 #endif
@@ -49,6 +53,9 @@ int fsmax;
 struct fsys_entry fsys_table[NUM_FSYS + 1] =
 {
   /* TFTP should come first because others don't handle net device.  */
+# ifdef PLATFORM_EFI
+  {"efitftp", efi_tftp_mount, efi_tftp_read, efi_tftp_dir, efi_tftp_close, 0},
+# endif
 # ifdef FSYS_TFTP
   {"tftp", tftp_mount, tftp_read, tftp_dir, tftp_close, 0},
 # endif
@@ -1067,7 +1074,7 @@ set_device (char *device)
       if (*device != ',' && *device != ')')
 	{
 	  char ch = *device;
-#ifdef SUPPORT_NETBOOT
+#if defined(SUPPORT_NETBOOT) || defined(PLATFORM_EFI)
 	  if (*device == 'f' || *device == 'h'
 	      || (*device == 'n' && network_ready)
 	      || (*device == 'c' && cdrom_drive != GRUB_INVALID_DRIVE))
@@ -1091,14 +1098,14 @@ set_device (char *device)
 
 	  if ((*device == 'f'
 	       || *device == 'h'
-#ifdef SUPPORT_NETBOOT
+#if defined(SUPPORT_NETBOOT) || defined(PLATFORM_EFI)
 	       || (*device == 'n' && network_ready)
 #endif
 	       || (*device == 'c' && cdrom_drive != GRUB_INVALID_DRIVE))
 	      && (device += 2, (*(device - 1) != 'd')))
 	    errnum = ERR_NUMBER_PARSING;
-	  
-#ifdef SUPPORT_NETBOOT
+
+#if defined(SUPPORT_NETBOOT) || defined(PLATFORM_EFI)
 	  if (ch == 'n' && network_ready)
 	    current_drive = NETWORK_DRIVE;
 	  else
@@ -1465,7 +1472,7 @@ print_completions (int is_filename, int is_completion)
 
 	      if (!ptr
 		  || *(ptr-1) != 'd'
-#ifdef SUPPORT_NETBOOT
+#if defined(SUPPORT_NETBOOT) || defined(PLATFORM_EFI)
 		  || *(ptr-2) != 'n'
 #endif /* SUPPORT_NETBOOT */
 		  || *(ptr-2) != 'c')
@@ -1496,7 +1503,7 @@ print_completions (int is_filename, int is_completion)
 		      || (*(ptr-1) == 'd' && *(ptr-2) == 'c')))
 		print_a_completion ("cd");
 
-# ifdef SUPPORT_NETBOOT
+# if defined(SUPPORT_NETBOOT) || defined(PLATFORM_EFI)
 	      if (network_ready
 		  && (disk_choice || NETWORK_DRIVE == current_drive)
 		  && (!ptr

@@ -115,6 +115,17 @@ void tftp_close (void);
 #define FSYS_TFTP_NUM 0
 #endif
 
+#ifdef PLATFORM_EFI
+#define FSYS_EFI_TFTP_NUM 1
+int efi_tftp_mount (void);
+int efi_tftp_read (char *buf, int len);
+int efi_tftp_dir (char *dirname);
+void efi_tftp_close (void);
+#else
+#define FSYS_EFI_TFTP_NUM 0
+#endif
+
+
 #ifdef FSYS_ISO9660
 #define FSYS_ISO9660_NUM 1
 int iso9660_mount (void);
@@ -128,7 +139,7 @@ int iso9660_dir (char *dirname);
 #define NUM_FSYS	\
   (FSYS_FFS_NUM + FSYS_FAT_NUM + FSYS_EXT2FS_NUM + FSYS_MINIX_NUM	\
    + FSYS_REISERFS_NUM + FSYS_VSTAFS_NUM + FSYS_JFS_NUM + FSYS_XFS_NUM	\
-   + FSYS_TFTP_NUM + FSYS_ISO9660_NUM + FSYS_UFS2_NUM)
+   + FSYS_TFTP_NUM + FSYS_EFI_TFTP_NUM + FSYS_ISO9660_NUM + FSYS_UFS2_NUM)
 #endif
 
 /* defines for the block filesystem info area */

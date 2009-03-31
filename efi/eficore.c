@@ -38,6 +38,18 @@ static grub_efi_guid_t console_control_guid = GRUB_EFI_CONSOLE_CONTROL_GUID;
 static grub_efi_guid_t loaded_image_guid = GRUB_EFI_LOADED_IMAGE_GUID;
 static grub_efi_guid_t device_path_guid = GRUB_EFI_DEVICE_PATH_GUID;
 
+grub_efi_status_t
+grub_efi_locate_handle_buffer (grub_efi_locate_search_type_t search_type,
+				grub_efi_guid_t *protocol,
+				void *search_key,
+				grub_efi_uintn_t *no_handles,
+				grub_efi_handle_t **buffer)
+{
+	return Call_Service_5(
+		grub_efi_system_table->boot_services->locate_handle_buffer,
+		search_type, protocol, search_key, no_handles, buffer);
+}
+
 void *
 grub_efi_locate_protocol (grub_efi_guid_t *protocol, void *registration)
 {
