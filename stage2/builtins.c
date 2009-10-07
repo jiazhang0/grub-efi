@@ -1508,7 +1508,7 @@ find_func (char *arg, int flags)
     }
 
   /* Hard disks.  */
-  for (drive = 0x80; drive < 0x88; drive++)
+  for (drive = 0x80; drive < (0x80 + MAX_HD_NUM); drive++)
     {
       unsigned long part = 0xFFFFFF;
       unsigned long start, len, offset, ext_offset, gpt_offset;

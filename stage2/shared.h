@@ -80,6 +80,8 @@ extern void *grub_scratch_mem;
 #define BIOSDISK_FLAG_LBA_EXTENSION	0x1
 #define BIOSDISK_FLAG_CDROM		0x2
 
+#define MAX_HD_NUM	128
+
 /*
  *  This is the filesystem (not raw device) buffer.
  *  It is 32K in size, do not overrun!
@@ -128,7 +130,7 @@ extern void *grub_scratch_mem;
 #define MENU_BUFLEN		(0x8000 + PASSWORD_BUF - MENU_BUF)
 
 /* The size of the drive map.  */
-#define DRIVE_MAP_SIZE		8
+#define DRIVE_MAP_SIZE		128
 
 /* The size of the key map.  */
 #define KEY_MAP_SIZE		128

@@ -411,7 +411,7 @@ sane_partition (void)
     return 1;
   
   if (!(current_partition & 0xFF000000uL)
-      && ((current_drive & 0xFFFFFF7F) < 8
+      && ((current_drive & 0xFFFFFF7F) < MAX_HD_NUM
 	  || current_drive == cdrom_drive)
       && (current_partition & 0xFF) == 0xFF
       && ((current_partition & 0xFF00) == 0xFF00
@@ -1495,7 +1495,7 @@ print_completions (int is_filename, int is_completion)
 		       i < (ptr && (*(ptr-1) == 'd' && *(ptr-2) == 'f') ? 1:2);
 		       i++)
 		    {
-		      for (j = 0; j < 8; j++)
+		      for (j = 0; j < MAX_HD_NUM; j++)
 			{
 			  disk_no = (i * 0x80) + j;
 			  if ((disk_choice || disk_no == current_drive)
