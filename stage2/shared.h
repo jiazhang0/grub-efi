@@ -374,6 +374,7 @@ extern void *grub_scratch_mem;
 #define tolower grub_tolower
 #define strlen grub_strlen
 #define strcpy grub_strcpy
+#define stpncpy grub_stpncpy
 #define strspn grub_strspn
 #define strcspn grub_strcspn
 #define strtok_r grub_strtok_r
@@ -610,6 +611,7 @@ typedef enum
 {
   PASSWORD_PLAIN,
   PASSWORD_MD5,
+  PASSWORD_ENCRYPTED,
   PASSWORD_UNSUPPORTED
 }
 password_t;
@@ -911,6 +913,7 @@ int grub_memcmp (const char *s1, const char *s2, int n);
 int grub_strcmp (const char *s1, const char *s2);
 int grub_strlen (const char *str);
 char *grub_strcpy (char *dest, const char *src);
+char *grub_stpncpy (char *dest, const char *src, int n);
 int grub_strspn(const char *s, const char *accept);
 int grub_strcspn(const char *s, const char *reject);
 char *grub_strtok_r(char *s, const char *delim, char **ptrptr);
@@ -1025,6 +1028,9 @@ int load_module (char *module, char *arg);
 int load_initrd (char *initrd);
 
 int check_password(char *entered, char* expected, password_t type);
+
+char *sha256_crypt (const char *key, const char *salt);
+char *sha512_crypt (const char *key, const char *salt);
 #endif
 
 void init_bios_info (void);

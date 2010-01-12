@@ -22,8 +22,8 @@ endif
 libgrub_a_SOURCES = boot.c builtins.c char_io.c cmdline.c common.c \
 	disk_io.c fsys_ext2fs.c fsys_fat.c fsys_ffs.c fsys_iso9660.c \
 	fsys_jfs.c fsys_minix.c fsys_reiserfs.c fsys_ufs2.c \
-	fsys_vstafs.c fsys_xfs.c gunzip.c md5.c serial.c stage2.c \
-	terminfo.c tparm.c graphics.c efistubs.c
+	fsys_vstafs.c fsys_xfs.c gunzip.c md5.c serial.c sha256crypt.c \
+	sha512crypt.c stage2.c terminfo.c tparm.c graphics.c efistubs.c
 libgrub_a_CFLAGS = $(GRUB_CFLAGS) -I$(top_srcdir)/lib \
 	-DGRUB_UTIL=1 -DFSYS_EXT2FS=1 -DFSYS_FAT=1 -DFSYS_FFS=1 \
 	-DFSYS_ISO9660=1 -DFSYS_JFS=1 -DFSYS_MINIX=1 -DFSYS_REISERFS=1 \
@@ -99,8 +99,8 @@ STAGE2_COMPILE = $(STAGE2_CFLAGS) -fno-builtin -nostdinc \
 libstage2_a_SOURCES = boot.c builtins.c char_io.c cmdline.c common.c \
 	disk_io.c fsys_ext2fs.c fsys_fat.c fsys_ffs.c fsys_iso9660.c \
 	fsys_jfs.c fsys_minix.c fsys_reiserfs.c fsys_ufs2.c \
-	fsys_vstafs.c fsys_xfs.c gunzip.c md5.c serial.c stage2.c \
-	terminfo.c tparm.c efistubs.c
+	fsys_vstafs.c fsys_xfs.c gunzip.c md5.c serial.c sha256crypt.c \
+	sha512crypt.c stage2.c terminfo.c tparm.c efistubs.c
 libstage2_a_CFLAGS = $(STAGE2_COMPILE) $(FSYS_CFLAGS)
 
 if !PLATFORM_EFI
@@ -113,8 +113,8 @@ pre_stage2_exec_SOURCES = asm.S bios.c boot.c builtins.c char_io.c \
 	cmdline.c common.c console.c disk_io.c fsys_ext2fs.c \
 	fsys_fat.c fsys_ffs.c fsys_iso9660.c fsys_jfs.c fsys_minix.c \
 	fsys_reiserfs.c fsys_ufs2.c fsys_vstafs.c fsys_xfs.c gunzip.c \
-	hercules.c md5.c serial.c smp-imps.c stage2.c terminfo.c tparm.c \
-	graphics.c
+	hercules.c md5.c serial.c smp-imps.c sha256crypt.c sha512crypt.c \
+	stage2.c terminfo.c tparm.c graphics.c
 pre_stage2_exec_CFLAGS = $(STAGE2_COMPILE) $(FSYS_CFLAGS)
 pre_stage2_exec_CCASFLAGS = $(STAGE2_COMPILE) $(FSYS_CFLAGS)
 pre_stage2_exec_LDFLAGS = $(PRE_STAGE2_LINK)

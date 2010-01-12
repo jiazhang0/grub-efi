@@ -120,6 +120,27 @@ check_password (char *entered, char* expected, password_t type)
     case PASSWORD_MD5:
       return check_md5_password (entered, expected);
 #endif
+
+    case PASSWORD_ENCRYPTED:
+      if (grub_memcmp (expected, "$1$", 3) == 0)
+	return check_md5_password (entered, expected);
+      else if (grub_memcmp (expected, "$5$", 3) == 0)
+	{
+	  char *hashed;
+
+	  hashed = sha256_crypt (entered, expected);
+	  return hashed == NULL || strcmp (expected, hashed);
+	}
+      else if (grub_memcmp (expected, "$6$", 3) == 0)
+	{
+	  char *hashed;
+
+	  hashed = sha512_crypt (entered, expected);
+	  return hashed == NULL || strcmp (expected, hashed);
+	}
+      else
+	return strcmp (entered, expected);
+
     default: 
       /* unsupported password type: be secure */
       return 1;
@@ -3188,6 +3209,11 @@ password_func (char *arg, int flags)
       arg = skip_to (0, arg);
     }
 #endif
+  else if (grub_memcmp (arg, "--encrypted", 5) == 0)
+    {
+      type = PASSWORD_ENCRYPTED;
+      arg = skip_to (0, arg);
+    }
   if (grub_memcmp (arg, "--", 2) == 0)
     {
       type = PASSWORD_UNSUPPORTED;
@@ -3235,7 +3261,7 @@ static struct builtin builtin_password =
   "password",
   password_func,
   BUILTIN_MENU | BUILTIN_CMDLINE | BUILTIN_NO_ECHO,
-  "password [--md5] PASSWD [FILE]",
+  "password [--md5|--encrypted] PASSWD [FILE]",
   "If used in the first section of a menu file, disable all"
   " interactive editing control (menu entry editor and"
   " command line). If the password PASSWD is entered, it loads the"
@@ -3244,7 +3270,8 @@ static struct builtin builtin_password =
   " instructions.  You can also use it in the script section, in"
   " which case it will ask for the password, before continueing."
   " The option --md5 tells GRUB that PASSWD is encrypted with"
-  " md5crypt."
+  " md5crypt, --encrypted that PASSWD is encrypted (with algorithm"
+  " specified in PASSWD: supported is md5, sha-256, sha-512)."
 };
 
 

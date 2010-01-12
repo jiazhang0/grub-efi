@@ -1577,6 +1577,26 @@ grub_strcpy (char *dest, const char *src)
   grub_memmove (dest, src, grub_strlen (src) + 1);
   return dest;
 }
+
+char *
+grub_stpncpy (char *dest, const char *src, int n)
+{
+  char *res;
+
+  res = NULL;
+  while (n != 0) {
+    *dest = *src;
+    if (*src != 0)
+      src++;
+    else if (res == NULL)
+      res = dest;
+    dest++;
+    n--;
+  }
+  if (res == NULL)
+    res = dest;
+  return res;
+}
 #endif /* ! STAGE1_5 */
 
 #ifndef GRUB_UTIL

@@ -21,6 +21,7 @@
 @dircategory Kernel
 @direntry
 * GRUB: (grub).                 The GRand Unified Bootloader
+* grub-crypt: (grub)Invoking grub-crypt.        Encrypt a password
 * grub-install: (grub)Invoking grub-install.    Install GRUB on your drive
 * grub-md5-crypt: (grub)Invoking grub-md5-crypt.        Encrypt a password
                                                         in MD5 format
@@ -115,8 +116,9 @@ This edition documents version @value{VERSION}.
 * Commands::                    The list of available builtin commands
 * Troubleshooting::             Error messages produced by GRUB
 * Invoking the grub shell::     How to use the grub shell
+* Invoking grub-crypt::         How to generate an encrypted password
 * Invoking grub-install::       How to use the GRUB installer
-* Invoking grub-md5-crypt::     How to generate a cryptic password
+* Invoking grub-md5-crypt::     How to generate an MD5-encrypted password
 * Invoking grub-terminfo::      How to generate a terminfo command
 * Invoking grub-set-default::   How to set a default boot entry
 * Invoking mbchk::              How to use the Multiboot checker
@@ -1685,27 +1687,17 @@ run the command @command{password} in your configuration file
 (@pxref{password}), like this:
 
 @example
-password --md5 PASSWORD
+password --encrypted PASSWORD
 @end example
 
 If this is specified, GRUB disallows any interactive control, until you
 press the key @key{p} and enter a correct password.  The option
-@option{--md5} tells GRUB that @samp{PASSWORD} is in MD5 format.  If it
+@option{--encrypted} tells GRUB that @samp{PASSWORD} is encrypted format.  If it
 is omitted, GRUB assumes the @samp{PASSWORD} is in clear text.
 
-You can encrypt your password with the command @command{md5crypt}
-(@pxref{md5crypt}). For example, run the grub shell (@pxref{Invoking the
-grub shell}), and enter your password:
-
-@example
-@group
-grub> md5crypt
-Password: **********
-Encrypted: $1$U$JK7xFegdxWH6VuppCUSIb.
-@end group
-@end example
-
-Then, cut and paste the encrypted password to your configuration file.
+You can encrypt your password with the program @command{grub-crypt}
+(@pxref{Invoking grub-crypt}). Then, cut and paste the encrypted password to
+your configuration file.
 
 Also, you can specify an optional argument to @command{password}. See
 this example:
@@ -2399,7 +2391,7 @@ is the new partition type and must be a number in the range 0-0xff.
 @node password
 @subsection password
 
-@deffn Command password [@option{--md5}] passwd [new-config-file]
+@deffn Command password [@option{--md5}] [@option{--encrypted}] passwd [new-config-file]
 If used in the first section of a menu file, disable all interactive
 editing control (menu entry editor and command-line) and entries
 protected by the command @command{lock}. If the password @var{passwd} is
@@ -2409,7 +2401,9 @@ specified. Otherwise, GRUB will just unlock the privileged instructions.
 You can also use this command in the script section, in which case it
 will ask for the password, before continuing.  The option
 @option{--md5} tells GRUB that @var{passwd} is encrypted with
-@command{md5crypt} (@pxref{md5crypt}).
+@command{md5crypt} (@pxref{md5crypt}), the option @option{--encrypted}
+tells GRUB that @var{passwd} is using one of the crypt formats (GRUB currently
+supports MD5, SHA-256 and SHA-512 encryption).
 @end deffn
 
 
@@ -3662,6 +3656,31 @@ between IDE and SCSI in your BIOS, it gets the order wrong.
 Thus, edit the file if the grub shell makes a mistake. You can put any
 comments in the file if needed, as the grub shell assumes that a line is
 just a comment if the first character is @samp{#}.
+
+
+@node Invoking grub-crypt
+@chapter Invoking grub-crypt
+
+The program @command{grub-crypt} encrypts a password in one of the specified
+formats. Passwords encrypted by this program can be used with the
+command @command{password} (@pxref{password}).
+
+@command{grub-crypt} accepts the following options:
+
+@table @option
+@item --help
+Print a summary of the command-line options and exit.
+
+@item --version
+Print the version information and exit.
+
+@item --md5
+Use MD5 for password encryption.
+@item --sha-256
+Use SHA-256 for password encryption.
+@item --sha-512
+Use SHA-512 for password encryption. This is the default.
+@end table
 
 
 @node Invoking grub-install
