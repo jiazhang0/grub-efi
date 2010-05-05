@@ -684,6 +684,8 @@ extern struct geometry buf_geom;
 extern int filepos;
 extern int filemax;
 
+extern int silent_grub;
+
 /*
  *  Common BIOS/boot data.
  */

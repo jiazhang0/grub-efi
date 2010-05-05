@@ -300,6 +300,9 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
 			       (big_linux ? "bzImage" : "zImage"),
 			       data_len, text_len);
 
+	  if (silent_grub)
+	    lh->vid_mode = 0x0f04;
+
 	  /* Video mode selection support. What a mess!  */
 	  /* NOTE: Even the word "mess" is not still enough to
 	     represent how wrong and bad the Linux video support is,

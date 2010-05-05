@@ -22,6 +22,8 @@
 
 grub_jmp_buf restart_env;
 
+int silent_grub = 0;
+
 #if defined(PRESET_MENU_STRING) || defined(SUPPORT_DISKLESS)
 
 # if defined(PRESET_MENU_STRING)
@@ -840,6 +842,9 @@ restart:
       (*current_term->shutdown)();
       current_term = term_table; /* assumption: console is first */
     }
+
+  if (silent_grub)
+    setcursor(0);
   
   while (1)
     {

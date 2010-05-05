@@ -291,6 +291,9 @@ boot_func (char *arg, int flags)
       current_term = term_table; /* assumption: console is first */
     }
 
+  if (silent_grub)
+    setcursor(0);
+
 #ifdef SUPPORT_NETBOOT
   /* Shut down the networking.  */
   cleanup_net ();
@@ -4407,6 +4410,22 @@ static struct builtin builtin_setup =
 #endif /* ! PLATFORM_EFI */
 
 
+static int
+silent_func (char *arg, int flags)
+{
+  silent_grub = 1;
+  return 0;
+}
+
+static struct builtin builtin_silent =
+{
+  "silent",
+  silent_func,
+  BUILTIN_MENU | BUILTIN_CMDLINE | BUILTIN_HELP_LIST,
+  "grub will attempt to avoid printing anything to the screen"
+};
+
+
 #if defined(SUPPORT_SERIAL) || defined(SUPPORT_HERCULES) || defined(SUPPORT_GRAPHICS)
 /* terminal */
 static int
@@ -5224,6 +5243,7 @@ struct builtin *builtin_table[] =
   &builtin_setkey,
   &builtin_setup,
 #endif
+  &builtin_silent,
 #ifdef SUPPORT_GRAPHICS
   &builtin_splashimage,
 #endif /* SUPPORT_GRAPHICS */
