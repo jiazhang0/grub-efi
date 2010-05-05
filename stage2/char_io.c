@@ -1346,6 +1346,26 @@ substring (const char *s1, const char *s2)
   return 1;
 }
 
+int
+subcasestring (const char *s1, const char *s2)
+{
+  while (tolower(*s1) == tolower(*s2))
+    {
+      /* The strings match exactly. */
+      if (! *(s1++))
+	return 0;
+      s2 ++;
+    }
+
+  /* S1 is a substring of S2. */
+  if (*s1 == 0)
+    return -1;
+
+  /* S1 isn't a substring. */
+  return 1;
+}
+
+
 #ifndef STAGE1_5
 /* Terminate the string STR with NUL.  */
 int

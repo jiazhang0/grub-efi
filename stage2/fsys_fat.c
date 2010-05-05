@@ -435,7 +435,7 @@ fat_dir (char *dirname)
 		goto print_filename;
 # endif /* STAGE1_5 */
 	      
-	      if (substring (dirname, filename) == 0)
+	      if (subcasestring (dirname, filename) == 0)
 		break;
 	    }
 	}
@@ -462,7 +462,7 @@ fat_dir (char *dirname)
       if (do_possibilities)
 	{
 	print_filename:
-	  if (substring (dirname, filename) <= 0)
+	  if (subcasestring (dirname, filename) <= 0)
 	    {
 	      if (print_possibilities > 0)
 		print_possibilities = -print_possibilities;
@@ -472,7 +472,7 @@ fat_dir (char *dirname)
 	}
 # endif /* STAGE1_5 */
       
-      if (substring (dirname, filename) == 0)
+      if (subcasestring (dirname, filename) == 0)
 	break;
     }
   

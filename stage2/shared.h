@@ -941,6 +941,7 @@ char *convert_to_ascii (char *buf, int c, unsigned int num);
 int get_cmdline (char *prompt, char *cmdline, int maxlen,
 		 int echo_char, int history);
 int substring (const char *s1, const char *s2);
+int subcasestring (const char *s1, const char *s2);
 int nul_terminate (char *str);
 int get_based_digit (int c, int base);
 int safe_parse_maxint (char **str_ptr, int *myint_ptr);
