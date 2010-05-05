@@ -38,6 +38,19 @@ static grub_efi_guid_t console_control_guid = GRUB_EFI_CONSOLE_CONTROL_GUID;
 static grub_efi_guid_t loaded_image_guid = GRUB_EFI_LOADED_IMAGE_GUID;
 static grub_efi_guid_t device_path_guid = GRUB_EFI_DEVICE_PATH_GUID;
 
+/* temporary, until we're using gnu-efi's include files --pjones */
+extern int setjmp(grub_jmp_buf env);
+int grub_setjmp(grub_jmp_buf env)
+{
+	return setjmp(env);
+}
+
+extern void longjmp(grub_jmp_buf env, int val);
+void grub_longjmp(grub_jmp_buf env, int val)
+{
+	longjmp(env, val);
+}
+
 grub_efi_status_t
 grub_efi_locate_handle_buffer (grub_efi_locate_search_type_t search_type,
 				grub_efi_guid_t *protocol,

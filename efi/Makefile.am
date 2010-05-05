@@ -32,8 +32,9 @@ GRUBEFI_FORMAT = efi-app-$(EFI_ARCH)
 GRUBSO_LD_SCRIPT = @GNUEFI_LDS@
 GRUBSO_LD_FLAGS = -T $(GRUBSO_LD_SCRIPT) -nostdlib -shared -Bsymbolic
 
-GRUBSO_OBJS = reloc.o efimain.o @GNUEFI_CRT0@
-GRUBSO_LIBS = $(top_srcdir)/stage2/libstage2.a libgrubefi.a @LIBGCC@
+GRUBSO_OBJS = efimain.o
+GRUBSO_LIBS = @GNUEFI_CRT0@ $(top_srcdir)/stage2/libstage2.a \
+		libgrubefi.a @LIBGCC@
 
 if NETBOOT_SUPPORT
 GRUBSO_LIBS += $(top_srcdir)/netboot/libdrivers.a
@@ -45,7 +46,7 @@ grub.efi: grub.so
 	$(OBJCOPY) -j .text -j .sdata -j .data -j .dynamic -j .dynsym -j .rel \
                    -j .rela -j .reloc --target=$(GRUBEFI_FORMAT) $^ $@
 
-grub.so: $(GRUBSO_OBJS) $(GRUBSO_LIBS)
+grub.so: $(GRUBSO_OBJS) $(GRUBSO_LIBS) @LIBGNUEFI@
 	$(LD) -o $@ $(GRUBSO_LD_FLAGS) $^
 	echo '-------------- unresolved symbols ---------------------'
 	! nm $@ | grep -iw u
@@ -57,9 +58,6 @@ crt0-efi.o: $(EFI_ARCH)/crt0-efi.S
 efimain.o: efimain.c
 	$(CC) -o $@ -c $(libgrubefi_a_CFLAGS) $^
 
-reloc.o: $(EFI_ARCH)/reloc.c
-	$(CC) -o $@ -c $(RELOC_FLAGS) $^
-
 clean-local:
 	-rm -rf grub.so grub.efi
 
@@ -70,7 +68,7 @@ RELOC_FLAGS = $(STAGE2_CFLAGS) -I$(top_srcdir)/stage1 \
 
 noinst_LIBRARIES = libgrubefi.a
 libgrubefi_a_SOURCES = $(EFI_ARCH)/callwrap.c eficore.c efimm.c efimisc.c \
-	$(EFI_ARCH)/setjmp.S eficon.c efidisk.c graphics.c efigraph.c efiuga.c \
+	eficon.c efidisk.c graphics.c efigraph.c efiuga.c \
 	font_8x16.c efiserial.c $(EFI_ARCH)/loader/linux.c efichainloader.c \
 	xpm.c pxe.c efitftp.c
 libgrubefi_a_CFLAGS = $(RELOC_FLAGS) -nostdinc
