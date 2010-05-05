@@ -32,7 +32,7 @@
 struct multiboot_info mbi;
 unsigned long saved_drive;
 unsigned long saved_partition;
-unsigned long cdrom_drive;
+unsigned long cdrom_drive = 0x100;
 #ifndef STAGE1_5
 unsigned long saved_mem_upper;
 

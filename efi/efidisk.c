@@ -534,7 +534,7 @@ grub_get_drive_partition_from_bdev_handle (grub_efi_handle_t handle,
 					   unsigned long *drive,
 					   unsigned long *partition)
 {
-  grub_efi_device_path_t *dp;
+  grub_efi_device_path_t *dp, *dp1;
   struct grub_efidisk_data *d, *devices;
   int drv;
   unsigned long part;
@@ -561,6 +561,27 @@ grub_get_drive_partition_from_bdev_handle (grub_efi_handle_t handle,
   dp = grub_efi_get_device_path (handle);
   if (! dp)
     return 0;
+
+  dp1 = dp;
+  while (1)
+    {
+      grub_efi_uint8_t type = GRUB_EFI_DEVICE_PATH_TYPE (dp1);
+      grub_efi_uint8_t subtype = GRUB_EFI_DEVICE_PATH_SUBTYPE(dp1);
+
+      if (type == GRUB_EFI_MEDIA_DEVICE_PATH_TYPE &&
+	      subtype == GRUB_EFI_CDROM_DEVICE_PATH_SUBTYPE)
+	{
+	  dp1->type = GRUB_EFI_END_DEVICE_PATH_TYPE;
+	  dp1->subtype = GRUB_EFI_END_ENTIRE_DEVICE_PATH_SUBTYPE;
+	  dp1->length[0] = 4;
+	  dp1->length[1] = 0;
+	}
+
+      if (GRUB_EFI_END_ENTIRE_DEVICE_PATH (dp1))
+	break;
+
+      dp1 = GRUB_EFI_NEXT_DEVICE_PATH(dp1);
+    }
 
   drv = 0;
   for (d = fd_devices; d; d = d->next, drv++)
