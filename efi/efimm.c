@@ -78,6 +78,45 @@ grub_efi_free_pool (void *buffer)
   Call_Service_1(b->free_pool, buffer);
 }
 
+void *
+grub_efi_allocate_anypages(grub_efi_uintn_t pages)
+{
+  grub_efi_boot_services_t *b;
+  grub_efi_status_t status;
+  grub_efi_physical_address_t address;
+
+  b = grub_efi_system_table->boot_services;
+  status = Call_Service_4 (b->allocate_pages,
+			    GRUB_EFI_ALLOCATE_ANY_PAGES,
+			    GRUB_EFI_LOADER_DATA,
+			    pages,
+			    &address);
+  if (status != GRUB_EFI_SUCCESS)
+  	return 0;
+
+  if (allocated_pages)
+     {
+       unsigned i;
+ 
+       for (i = 0; i < MAX_ALLOCATED_PAGES; i++)
+ 	if (allocated_pages[i].addr == 0)
+        {
+              allocated_pages[i].addr = address;
+              allocated_pages[i].num_pages = pages;
+              break;
+        }
+ 
+       if (i == MAX_ALLOCATED_PAGES)
+        {
+           grub_printf ("too many page allocations");
+           return NULL;
+        }
+     }
+ 
+  return (void *) ((grub_addr_t) address);
+
+}
+
 /* Allocate pages. Return the pointer to the first of allocated pages.  */
 void *
 grub_efi_allocate_pages (grub_efi_physical_address_t address,

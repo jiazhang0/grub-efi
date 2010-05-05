@@ -40,6 +40,8 @@
 static unsigned long linux_mem_size;
 static int loaded;
 static void *real_mode_mem;
+static void *prot_mode_mem;
+static grub_size_t prot_kernel_size;
 static void *initrd_mem;
 static void *mmap_buf;
 static grub_efi_uintn_t real_mode_pages;
@@ -143,6 +145,7 @@ allocate_pages (grub_size_t real_size, grub_size_t prot_size)
 
   /* Initialize the memory pointers with NULL for convenience.  */
   real_mode_mem = 0;
+  prot_mode_mem = 0;
   mmap_buf = 0;
 
   /* Read the memory map temporarily, to find free space.  */
@@ -205,6 +208,13 @@ allocate_pages (grub_size_t real_size, grub_size_t prot_size)
       goto fail;
     }
 
+  grub_printf("Trying to allocate %u pages for VMLINUZ\n",
+		(unsigned) prot_mode_pages);
+  prot_mode_mem = grub_efi_allocate_anypages(prot_mode_pages);
+
+  if (!prot_mode_mem)
+	grub_fatal("Cannot allocate pages for VMLINUZ");
+    
   mmap_buf = grub_efi_allocate_pages (0, mmap_pages);
   if (! mmap_buf)
     {
@@ -259,6 +269,11 @@ big_linux_boot (void)
     grub_fatal ("cannot exit boot services");
 
   /* Note that no boot services are available from here.  */
+
+  /* copy vmlinuz image to hdr.code32_start */
+  memcpy ((char *)(unsigned long)(params->hdr.code32_start), (char *)prot_mode_mem,
+	  prot_kernel_size);
+  /* copy switch image */
   memcpy ((void *) 0x700, switch_image, switch_size);
 
   lh = &params->hdr;
@@ -370,6 +385,7 @@ grub_load_linux (char *kernel, char *arg)
 
   real_size = 0x1000 + grub_strlen(arg);
   prot_size = grub_file_size () - (setup_sects << SECTOR_BITS) - SECTOR_SIZE;
+  prot_kernel_size = prot_size;
 
   if (! allocate_pages (real_size, prot_size))
     goto fail;
@@ -501,7 +517,7 @@ grub_load_linux (char *kernel, char *arg)
 
   grub_seek ((setup_sects << SECTOR_BITS) + SECTOR_SIZE);
   len = prot_size;
-  if (grub_read ((char *) GRUB_LINUX_BZIMAGE_ADDR, len) != len)
+  if (grub_read ((char *)prot_mode_mem, len) != len)
     grub_printf ("Couldn't read file");
 
   if (errnum == ERR_NONE)

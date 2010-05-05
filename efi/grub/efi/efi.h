@@ -45,6 +45,7 @@ int grub_efi_set_text_mode (int on);
 void grub_efi_stall (grub_efi_uintn_t microseconds);
 void *grub_efi_allocate_pool (grub_efi_uintn_t size);
 void grub_efi_free_pool (void *buffer);
+void *grub_efi_allocate_anypages (grub_efi_uintn_t pages);
 void *grub_efi_allocate_pages (grub_efi_physical_address_t address,
 			       grub_efi_uintn_t pages);
 void
