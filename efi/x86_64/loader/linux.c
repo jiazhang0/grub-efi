@@ -169,15 +169,23 @@ allocate_pages (grub_size_t real_size, grub_size_t prot_size)
 	  && desc->num_pages >= real_mode_pages)
 	{
 	  grub_efi_physical_address_t physical_end;
+          int allocsize = real_size + mmap_size;
 
           physical_end = desc->physical_start + (desc->num_pages << 12);
 
           grub_dprintf ("linux", "physical_start = %x, physical_end = %x\n",
                         (unsigned) desc->physical_start,
                         (unsigned) physical_end);
-          addr = physical_end - real_size - mmap_size;
+          addr = physical_end - allocsize;
           if (addr < 0x10000)
             continue;
+
+          /* the kernel wants this address to be under 1 gig.*/
+          if (desc->physical_start > 0x40000000 - allocsize)
+            continue;
+
+          if (addr > 0x40000000 - allocsize)
+            addr = 0x40000000 - allocsize;
 
           grub_dprintf ("linux", "trying to allocate %u pages at %x\n",
                         (unsigned) real_mode_pages, (unsigned) addr);
