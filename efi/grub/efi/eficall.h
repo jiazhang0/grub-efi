@@ -145,6 +145,7 @@ EFI_STATUS x64_call10(unsigned long func, unsigned long a,
 
 #else
 
+typedef long EFI_STATUS;
 #define Call_Service(func)                      func()
 #define Call_Service_1(func,a)                  func(a)
 #define Call_Service_2(func,a,b)                func(a,b)
