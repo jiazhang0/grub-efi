@@ -100,10 +100,14 @@ ino2offset (xfs_ino_t ino)
 static inline xfs_uint16_t __attribute__((__const__))
 le16 (xfs_uint16_t x) 
 {
+#if 1
+	return ((x & 0xff00) >> 8) | ((x & 0xff) << 8);
+#else
 	__asm__("xchgb %b0,%h0"	\
 		: "=q" (x) \
 		:  "0" (x)); \
 		return x;
+#endif
 }
 
 static inline xfs_uint32_t __attribute__((__const__))
