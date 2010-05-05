@@ -635,6 +635,13 @@ extern int debug;
 extern int debug_graphics;
 #endif /* STAGE1_5 */
 
+/* Verbose mode flag. */
+extern int grub_verbose;
+#define verbose_printf(format...) \
+  do { if (grub_verbose) printf(format); } while (0)
+#define grub_verbose_printf(format...) \
+  do { if (grub_verbose) grub_printf(format); } while (0)
+
 extern unsigned long current_drive;
 extern unsigned long current_partition;
 
@@ -809,6 +816,10 @@ int getkey (void);
 /* Like GETKEY, but doesn't block, and returns -1 if no keystroke is
    available. */
 int checkkey (void);
+
+/* Return keyboard modifier status. */
+int
+keystatus (void);
 
 /* Low-level disk I/O */
 int get_diskinfo (int drive, struct geometry *geometry);

@@ -30,7 +30,8 @@ disk_read_savesect_func (int sector, int offset, int length)
 void
 cmain (void)
 {
-  grub_printf ("\n\nGRUB loading, please wait...\n");
+  if (0)
+    grub_printf ("\n\nGRUB loading, please wait...\n");
 
   /*
    *  Here load the true second-stage boot-loader.

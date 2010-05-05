@@ -54,6 +54,12 @@ typedef enum
 /* Set when the terminal needs to be initialized.  */
 #define TERM_NEED_INIT		(1 << 16)
 
+/* Bitmasks for modifier keys returned by term->keystatus(). */
+#define TERM_STATUS_ALT		(1 << 3)
+#define TERM_STATUS_CTRL	(1 << 2)
+#define TERM_STATUS_LEFT_SHIFT	(1 << 1)
+#define TERM_STATUS_RIGHT_SHIFT	(1 << 0)
+
 struct term_entry
 {
   /* The name of a terminal.  */
@@ -68,6 +74,8 @@ struct term_entry
   int (*checkkey) (void);
   /* Get a character.  */
   int (*getkey) (void);
+  /* Get keyboard modifier status.  */
+  int (*keystatus) (void);
   /* Get the cursor position. The return value is ((X << 8) | Y).  */
   int (*getxy) (void);
   /* Go to the position (X, Y).  */
@@ -103,6 +111,7 @@ void console_putchar (int c);
 #ifndef STAGE1_5
 int console_checkkey (void);
 int console_getkey (void);
+int console_keystatus (void);
 int console_getxy (void);
 void console_gotoxy (int x, int y);
 void console_cls (void);

@@ -786,6 +786,13 @@ console_getkey (void)
   return console_translate_key (c);
 }
 
+/* returns modifier status */
+int
+console_keystatus (void)
+{
+  return 0;
+}
+
 /* returns packed values, LSB+1 is x, LSB is y */
 int
 console_getxy (void)

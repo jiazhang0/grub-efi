@@ -39,6 +39,9 @@
 	
 	/* Print message string */
 #define MSG(x)	movw $ABS(x), %si; call message
+	
+	/* Print verbose message string */
+#define VMSG(x)
 
 	.file	"start.S"
 
@@ -67,9 +70,9 @@ _start:
 
 	/* print a notification message on the screen */
 	pushw	%si
-	MSG(notification_string)
+	VMSG(notification_string)
 	popw	%si
-	
+
 	/* this sets up for the first run through "bootloop" */
 	movw	$ABS(firstlist - BOOTSEC_LISTSIZE), %di
 
@@ -291,9 +294,9 @@ copy_buffer:
 	movsb		/* this runs the actual copy */
 
 	/* restore addressing regs and print a dot with correct DS 
-	   (MSG modifies SI, which is saved, and unused AX and BX) */
+	   (VMSG modifies SI, which is saved, and unused AX and BX) */
 	popw	%ds
-	MSG(notification_step)
+	VMSG(notification_step)
 	popa
 
 	/* check if finished with this dataset */
@@ -310,7 +313,7 @@ copy_buffer:
 
 bootit:
 	/* print a newline */
-	MSG(notification_done)
+	VMSG(notification_done)
 	popw	%dx	/* this makes sure %dl is our "boot" drive */
 #ifdef STAGE1_5
 	ljmp	$0, $0x2200

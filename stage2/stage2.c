@@ -235,7 +235,8 @@ run_menu (char *menu_entries, char *config_entries, int num_entries,
   char *cur_entry = 0;
   struct term_entry *prev_term = NULL;
 
-  cls();
+  if (grub_verbose)
+    cls();
 
   /*
    *  Main loop for menu UI.
@@ -257,23 +258,36 @@ restart:
      interface. */
   if (grub_timeout < 0)
     show_menu = 1;
-  
+
   /* If SHOW_MENU is false, don't display the menu until ESC is pressed.  */
   if (! show_menu)
     {
+      /* Don't show the "Booting in blah seconds message" if the timeout is 0 */
+      int print_message = grub_timeout != 0;
+
       /* Get current time.  */
       while ((time1 = getrtsecs ()) == 0xFF)
 	;
-      grub_printf("\rPress any key to enter the menu\n\n\n");
+
+      if (print_message)
+	grub_printf("\rPress any key to enter the menu\n\n\n");
 
       while (1)
 	{
-	  /* Check if ESC is pressed.  */
+	  /* Check if any key is pressed */
 	  if (checkkey () != -1)
 	    {
 	      grub_timeout = -1;
 	      show_menu = 1;
 	      getkey ();
+	      break;
+	    }
+
+	  /* See if a modifier key is held down.  */
+	  if (keystatus () != 0)
+	    {
+	      grub_timeout = -1;
+	      show_menu = 1;
 	      break;
 	    }
 
@@ -292,9 +306,10 @@ restart:
 	      grub_timeout--;
 	      
 	      /* Print a message.  */
-	      grub_printf ("\rBooting %s in %d seconds...",
-			   get_entry(menu_entries, first_entry + entryno, 0),
-			   grub_timeout);
+	      if (print_message)
+		grub_printf ("\rBooting %s in %d seconds...",
+		             get_entry(menu_entries, first_entry + entryno, 0),
+		             grub_timeout);
 	    }
 	}
     }
@@ -811,8 +826,11 @@ restart:
   
  boot_entry:
   
-  cls ();
-  setcursor (1);
+  if (grub_verbose || show_menu)
+    {
+      cls ();
+      setcursor (1);
+    }
   /* if our terminal needed initialization, we should shut it down
    * before booting the kernel, but we want to save what it was so
    * we can come back if needed */
@@ -826,10 +844,10 @@ restart:
   while (1)
     {
       if (config_entries)
-	printf ("  Booting \'%s\'\n\n",
+	verbose_printf ("  Booting \'%s\'\n\n",
 		get_entry (menu_entries, first_entry + entryno, 0));
       else
-	printf ("  Booting command-list\n\n");
+	verbose_printf ("  Booting command-list\n\n");
 
       if (! cur_entry)
 	cur_entry = get_entry (config_entries, first_entry + entryno, 1);
@@ -1144,6 +1162,7 @@ cmain (void)
 	  /* If no acceptable config file, goto command-line, starting
 	     heap from where the config entries would have been stored
 	     if there were any.  */
+	  grub_verbose = 1;
 	  enter_cmdline (config_entries, 1);
 	}
       else

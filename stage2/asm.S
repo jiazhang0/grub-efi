@@ -2096,6 +2096,37 @@ pending:
 	pop	%ebp
 	ret
 
+
+/*
+ * int console_keystatus (void)
+ * BIOS call "INT 16H Function 02H" to get keyboard modifier status
+ *	Call with	%ah = 0x2
+ *	Return:		%al = keyboard state:
+ *				bit 3: alt key down
+ *				bit 2: ctrl key down
+ *				bit 1: left shift key down
+ *				bit 0: right shift key down
+ */
+ENTRY(console_keystatus)
+	push	%ebp
+
+	call	EXT_C(prot_to_real)
+	.code16
+	
+	movb	$0x12, %ah
+	int	$0x16
+	movw	%ax, %dx
+
+	DATA32	call	EXT_C(real_to_prot)
+	.code32
+
+	movw	%dx, %ax
+	
+	/* Mask out numlock, capslock and insert state. */
+	andl	$0x0f0f, %eax
+	pop	%ebp
+	ret
+	
 	
 /*
  * int console_getxy (void)

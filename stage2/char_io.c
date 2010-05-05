@@ -39,6 +39,7 @@ struct term_entry term_table[] =
       console_putchar,
       console_checkkey,
       console_getkey,
+      console_keystatus,
       console_getxy,
       console_gotoxy,
       console_cls,
@@ -57,6 +58,7 @@ struct term_entry term_table[] =
       serial_putchar,
       serial_checkkey,
       serial_getkey,
+      0,
       serial_getxy,
       serial_gotoxy,
       serial_cls,
@@ -75,6 +77,7 @@ struct term_entry term_table[] =
       hercules_putchar,
       console_checkkey,
       console_getkey,
+      console_keystatus,
       hercules_getxy,
       hercules_gotoxy,
       hercules_cls,
@@ -92,6 +95,7 @@ struct term_entry term_table[] =
       graphics_putchar, /* putchar */
       console_checkkey, /* checkkey */
       console_getkey, /* getkey */
+      console_keystatus, /* keystatus */
       graphics_getxy, /* getxy */
       graphics_gotoxy, /* gotoxy */
       graphics_cls, /* cls */
@@ -1165,6 +1169,16 @@ int
 checkkey (void)
 {
   return current_term->checkkey ();
+}
+
+/* Return keyboard modifier status. */
+int
+keystatus (void)
+{
+  if (current_term->keystatus)
+    return current_term->keystatus ();
+  else 
+    return 0;
 }
 #endif /* ! STAGE1_5 */
 

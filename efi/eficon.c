@@ -212,6 +212,13 @@ console_getkey (void)
 }
 
 int
+console_keystatus (void)
+{
+  /* Doesn't look like EFI can support this... */
+  return 0;
+}
+
+int
 console_getxy (void)
 {
   grub_efi_simple_text_output_interface_t *o;

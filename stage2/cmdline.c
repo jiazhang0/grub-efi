@@ -237,12 +237,12 @@ run_script (char *script, char *heap)
       builtin = find_command (heap);
       if (! builtin)
 	{
-	  grub_printf ("%s\n", old_entry);
+	  grub_verbose_printf ("%s\n", old_entry);
 	  continue;
 	}
 
       if (! (builtin->flags & BUILTIN_NO_ECHO))
-	grub_printf ("%s\n", old_entry);
+	grub_verbose_printf ("%s\n", old_entry);
 
       /* If BUILTIN cannot be run in the command-line, skip it.  */
       if (! (builtin->flags & BUILTIN_CMDLINE))

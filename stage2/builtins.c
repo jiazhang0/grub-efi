@@ -57,6 +57,8 @@ static int bootdev;
    when it is turned off.  */
 int debug = 0;
 int debug_graphics = 0;
+/* Print what we're booting */
+int grub_verbose = 0;
 /* The default entry.  */
 int default_entry = 0;
 /* The fallback entry.  */
@@ -822,6 +824,34 @@ static struct builtin builtin_debug =
   BUILTIN_CMDLINE | BUILTIN_MENU,
   "debug",
   "Turn on/off the debug mode."
+};
+
+
+/* verbose */
+static int
+verbose_func (char *arg, int flags)
+{
+  if (grub_verbose)
+    {
+      grub_verbose = 0;
+      grub_printf (" Verbose mode is turned off\n");
+    }
+  else
+    {
+      grub_verbose = 1;
+      grub_printf (" Verbose mode is turned on\n");
+    }
+
+  return 0;
+}
+
+static struct builtin builtin_verbose =
+{
+  "verbose",
+  verbose_func,
+  BUILTIN_CMDLINE | BUILTIN_MENU,
+  "verbose",
+  "Turn on/off verbose output."
 };
 
 
@@ -3420,7 +3450,8 @@ real_root_func (char *arg, int attempt_mount)
 	return 1;
       
       /* Print the type of the filesystem.  */
-      print_fsys_type ();
+      if (grub_verbose)
+	print_fsys_type ();
     }
   
   return 0;
@@ -5216,5 +5247,6 @@ struct builtin *builtin_table[] =
   &builtin_uppermem,
   &builtin_vbeprobe,
 #endif
+  &builtin_verbose,
   0
 };

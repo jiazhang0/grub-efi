@@ -31,6 +31,8 @@
 
 	/* Print message string */
 #define MSG(x)	movw $ABS(x), %si; call message
+	/* Print verbose message string */
+#define VMSG(x)
 
 	/* XXX:	binutils-2.9.1.0.x doesn't produce a short opcode for this. */
 #define	MOV_MEM_TO_AL(x)	.byte 0xa0;  .word x
@@ -151,7 +153,7 @@ real_start:
 	pushw	%dx
 
 	/* print a notification message on the screen */
-	MSG(notification_string)
+	VMSG(notification_string)
 
 	/* do not probe LBA if the drive is a floppy */
 	testb	$STAGE1_BIOS_HD_FLAG, %dl

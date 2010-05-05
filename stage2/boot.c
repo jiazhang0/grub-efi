@@ -287,8 +287,9 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
 	errnum = ERR_WONT_FIT;
       else
 	{
-	  grub_printf ("   [Linux-%s, setup=0x%x, size=0x%x]\n",
-		       (big_linux ? "bzImage" : "zImage"), data_len, text_len);
+	  grub_verbose_printf ("   [Linux-%s, setup=0x%x, size=0x%x]\n",
+			       (big_linux ? "bzImage" : "zImage"),
+			       data_len, text_len);
 
 	  /* Video mode selection support. What a mess!  */
 	  /* NOTE: Even the word "mess" is not still enough to
@@ -494,7 +495,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
   mbi.syms.a.addr = 0;
   mbi.syms.a.pad = 0;
 
-  printf ("   [%s-%s", str2, str);
+  verbose_printf ("   [%s-%s", str2, str);
 
   str = "";
 
@@ -503,7 +504,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
       if (flags & MULTIBOOT_AOUT_KLUDGE)
 	str = "-and-data";
 
-      printf (", loadaddr=0x%x, text%s=0x%x", cur_addr, str, text_len);
+      verbose_printf (", loadaddr=0x%x, text%s=0x%x", cur_addr, str, text_len);
 
       /* read text, then read data */
       if (grub_read ((char *) RAW_ADDR (cur_addr), text_len) == text_len)
@@ -516,9 +517,9 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
 	      if (align_4k)
 		cur_addr = (cur_addr + 0xFFF) & 0xFFFFF000;
 	      else
-		printf (", C");
+		verbose_printf (", C");
 
-	      printf (", data=0x%x", data_len);
+	      verbose_printf (", data=0x%x", data_len);
 
 	      if ((grub_read ((char *) RAW_ADDR (cur_addr), data_len)
 		   != data_len)
@@ -532,7 +533,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
 	      memset ((char *) RAW_ADDR (cur_addr), 0, bss_len);
 	      cur_addr += bss_len;
 
-	      printf (", bss=0x%x", bss_len);
+	      verbose_printf (", bss=0x%x", bss_len);
 	    }
 	}
       else if (!errnum)
@@ -552,7 +553,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
 	  *((int *) RAW_ADDR (cur_addr)) = pu.aout->a_syms;
 	  cur_addr += sizeof (int);
 	  
-	  printf (", symtab=0x%x", pu.aout->a_syms);
+	  verbose_printf (", symtab=0x%x", pu.aout->a_syms);
 
 	  if (grub_read ((char *) RAW_ADDR (cur_addr), pu.aout->a_syms)
 	      == pu.aout->a_syms)
@@ -569,7 +570,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
 
 		  i -= sizeof (int);
 
-		  printf (", strtab=0x%x", i);
+		  verbose_printf (", strtab=0x%x", i);
 
 		  symtab_err = (grub_read ((char *) RAW_ADDR (cur_addr), i)
 				!= i);
@@ -583,7 +584,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
 
 	  if (symtab_err)
 	    {
-	      printf ("(bad)");
+	      verbose_printf ("(bad)");
 	      cur_addr = orig_addr;
 	      mbi.syms.a.tabsize = 0;
 	      mbi.syms.a.strsize = 0;
@@ -637,7 +638,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
 	      /* mark memory as used */
 	      if (cur_addr < memaddr + memsiz)
 		cur_addr = memaddr + memsiz;
-	      printf (", <0x%x:0x%x:0x%x>", memaddr, filesiz,
+	      verbose_printf (", <0x%x:0x%x:0x%x>", memaddr, filesiz,
 		      memsiz - filesiz);
 	      /* increment number of segments */
 	      loaded++;
@@ -683,7 +684,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
 		  shdr = (Elf32_Shdr *) mbi.syms.e.addr;
 		  cur_addr += tab_size;
 		  
-		  printf (", shtab=0x%x", cur_addr);
+		  verbose_printf (", shtab=0x%x", cur_addr);
   		  
 		  for (i = 0; i < mbi.syms.e.num; i++)
 		    {
@@ -725,7 +726,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
 	      
 	      if (symtab_err) 
 		{
-		  printf ("(bad)");
+		  verbose_printf ("(bad)");
 		  mbi.syms.e.num = 0;
 		  mbi.syms.e.size = 0;
 		  mbi.syms.e.addr = 0;
@@ -740,7 +741,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
 
   if (! errnum)
     {
-      grub_printf (", entry=0x%x]\n", (unsigned) entry_addr);
+      grub_verbose_printf (", entry=0x%x]\n", (unsigned) entry_addr);
       
       /* If the entry address is physically different from that of the ELF
 	 header, correct it here.  */
@@ -785,7 +786,7 @@ load_module (char *module, char *arg)
       return 0;
     }
 
-  printf ("   [Multiboot-module @ 0x%x, 0x%x bytes]\n", cur_addr, len);
+  verbose_printf ("   [Multiboot-module @ 0x%x, 0x%x bytes]\n", cur_addr, len);
 
   /* these two simply need to be set if any modules are loaded at all */
   mbi.flags |= MB_INFO_MODS;
@@ -856,7 +857,7 @@ load_initrd (char *initrd)
   moveto -= 0x10000;
   memmove ((void *) RAW_ADDR (moveto), (void *) cur_addr, len);
 
-  printf ("   [Linux-initrd @ 0x%x, 0x%x bytes]\n", moveto, len);
+  verbose_printf ("   [Linux-initrd @ 0x%x, 0x%x bytes]\n", moveto, len);
 
   /* FIXME: Should check if the kernel supports INITRD.  */
   lh->ramdisk_image = RAW_ADDR (moveto);
