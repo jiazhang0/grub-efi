@@ -1107,7 +1107,6 @@ safe_parse_maxint (char **str_ptr, int *myint_ptr)
 }
 #endif /* STAGE1_5 */
 
-#if !defined(STAGE1_5) || defined(FSYS_FAT)
 int
 grub_tolower (int c)
 {
@@ -1116,7 +1115,6 @@ grub_tolower (int c)
 
   return c;
 }
-#endif /* ! STAGE1_5 || FSYS_FAT */
 
 int
 grub_isspace (int c)
