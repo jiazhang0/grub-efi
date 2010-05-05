@@ -1107,6 +1107,7 @@ write_to_partition (char **map, int drive, int partition,
 	   (strncmp(dev, "/dev/ida/", 9) == 0 ||
 	    strncmp(dev, "/dev/ataraid/", 13) == 0 ||
 	    strncmp(dev, "/dev/mapper/", 12) == 0 || 
+	    strncmp(dev, "/dev/md", 7) == 0 ||
 	    strncmp(dev, "/dev/cciss/", 11) == 0 ||
 	    strncmp(dev, "/dev/rd/", 8) == 0) ? "p" : "",
 	   ((partition >> 16) & 0xFF) + 1);
