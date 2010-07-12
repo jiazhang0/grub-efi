@@ -540,10 +540,10 @@ void graphics_cursor(int set) {
                 offset += 80;
             }
             else {
-                chr[i     ] = mask;
-                chr[16 + i] = mask;
-                chr[32 + i] = mask;
-                chr[48 + i] = mask;
+                chr[i     ] = ~mask;
+                chr[16 + i] = ~mask;
+                chr[32 + i] = ~mask;
+                chr[48 + i] = ~mask;
             }
         }
     }

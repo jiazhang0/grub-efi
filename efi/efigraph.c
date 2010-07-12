@@ -676,7 +676,7 @@ cursor(struct graphics_backend *backend, int set)
     offset = fpos.y * screensz.x + fpos.x;
 
     if (set)
-        text[offset] |= 0x200;
+        text[offset] |= 0x0200;
 
     graphics_clbl(fpos.x, fpos.y, 1, 1, 1);
 
@@ -954,18 +954,19 @@ bltbuf_draw_character(struct graphics_backend *backend,
             int bit = glyph[glyphpos.y] & (1 << ((fontsz.x-1) - glyphpos.x));
             int idx = -1;
 
-            if (set)
-                idx = bit ? 0 : 15;
-            else
+            if (!set) {
                 if (invert)
-                idx = bit ? 15 : 0;
-            else if (bit)
-                idx = 15;
+                    idx = bit ? 0 : 15;
+                else if (bit)
+                    idx = 15;
 
-            if (idx == -1) {
-                if (is_shadow_pixel(screensz, charpos, glyphpos, fontsz) ||
-                        !eg->background)
-                    idx = invert ? 15 : 0;
+                if (idx == -1) {
+                    if (is_shadow_pixel(screensz, charpos, glyphpos, fontsz) ||
+                            !eg->background)
+                        idx = invert ? 15 : 0;
+                }
+            } else {
+                idx = bit ? 0 : 15;
             }
 
             if (idx != -1)
