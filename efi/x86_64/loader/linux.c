@@ -43,56 +43,15 @@ static void *real_mode_mem;
 static void *prot_mode_mem;
 static grub_size_t prot_kernel_size;
 static void *initrd_mem;
-static void *mmap_buf;
 static grub_efi_uintn_t real_mode_pages;
 static grub_efi_uintn_t prot_mode_pages;
 static grub_efi_uintn_t initrd_pages;
-static grub_efi_uintn_t mmap_pages;
 static grub_efi_guid_t graphics_output_guid = GRUB_EFI_GRAPHICS_OUTPUT_GUID;
 
 static inline grub_size_t
 page_align (grub_size_t size)
 {
   return (size + (1 << 12) - 1) & (~((1 << 12) - 1));
-}
-
-/* Find the optimal number of pages for the memory map. Is it better to
-   move this code to efimm.c?  */
-static grub_efi_uintn_t
-find_mmap_size (void)
-{
-  static grub_efi_uintn_t mmap_size = 0;
-
-  if (mmap_size != 0)
-    return mmap_size;
-
-  mmap_size = (1 << 12);
-  while (1)
-    {
-      int ret;
-      grub_efi_memory_descriptor_t *mmap;
-      grub_efi_uintn_t desc_size;
-
-      mmap = grub_malloc (mmap_size);
-      if (! mmap)
-	return 0;
-
-      ret = grub_efi_get_memory_map (&mmap_size, mmap, 0, &desc_size, 0);
-      grub_free (mmap);
-
-      if (ret < 0)
-	grub_fatal ("cannot get memory map");
-      else if (ret > 0)
-	break;
-
-      mmap_size += (1 << 12);
-    }
-
-  /* Increase the size a bit for safety, because GRUB allocates more on
-     later, and EFI itself may allocate more.  */
-  mmap_size += (1 << 11);
-
-  return page_align (mmap_size);
 }
 
 static void
@@ -123,15 +82,13 @@ static int
 allocate_pages (grub_size_t real_size, grub_size_t prot_size)
 {
   grub_efi_uintn_t desc_size;
-  grub_efi_memory_descriptor_t *mmap, *mmap_end;
-  grub_efi_uintn_t mmap_size, tmp_mmap_size;
+  grub_efi_memory_descriptor_t *mmap_end;
   grub_efi_memory_descriptor_t *desc;
   grub_efi_physical_address_t addr;
 
   /* Make sure that each size is aligned to a page boundary.  */
   real_size = page_align (real_size + SECTOR_SIZE);
   prot_size = page_align (prot_size);
-  mmap_size = find_mmap_size ();
 
   grub_dprintf ("linux", "real_size = %x, prot_size = %x, mmap_size = %x\n",
 		(unsigned int) real_size, (unsigned int) prot_size,
@@ -141,30 +98,19 @@ allocate_pages (grub_size_t real_size, grub_size_t prot_size)
      the memory map buffer for simplicity.  */
   real_mode_pages = (real_size >> 12);
   prot_mode_pages = (prot_size >> 12);
-  mmap_pages = (mmap_size >> 12);
 
   /* Initialize the memory pointers with NULL for convenience.  */
   real_mode_mem = 0;
   prot_mode_mem = 0;
-  mmap_buf = 0;
 
-  /* Read the memory map temporarily, to find free space.  */
-  mmap = grub_malloc (mmap_size);
-  if (! mmap)
-    {
-      errnum = ERR_UNRECOGNIZED;
-      return 0;
-    }
-
-  tmp_mmap_size = mmap_size;
-  if (grub_efi_get_memory_map (&tmp_mmap_size, mmap, 0, &desc_size, 0) <= 0)
+  if (grub_efi_get_memory_map (0, &desc_size, 0) <= 0)
     grub_fatal ("cannot get memory map");
 
   addr = 0;
-  mmap_end = NEXT_MEMORY_DESCRIPTOR (mmap, tmp_mmap_size);
+  mmap_end = NEXT_MEMORY_DESCRIPTOR (mmap_buf, mmap_size);
   /* First, find free pages for the real mode code
      and the memory map buffer.  */
-  for (desc = mmap;
+  for (desc = mmap_buf;
        desc < mmap_end;
        desc = NEXT_MEMORY_DESCRIPTOR (desc, desc_size))
     {
@@ -172,23 +118,22 @@ allocate_pages (grub_size_t real_size, grub_size_t prot_size)
 	  && desc->num_pages >= real_mode_pages)
 	{
 	  grub_efi_physical_address_t physical_end;
-          int allocsize = real_size + mmap_size;
 
           physical_end = desc->physical_start + (desc->num_pages << 12);
 
           grub_dprintf ("linux", "physical_start = %x, physical_end = %x\n",
                         (unsigned) desc->physical_start,
                         (unsigned) physical_end);
-          addr = physical_end - allocsize;
+          addr = physical_end - real_size;
           if (addr < 0x10000)
             continue;
 
           /* the kernel wants this address to be under 1 gig.*/
-          if (desc->physical_start > 0x40000000 - allocsize)
+          if (desc->physical_start > 0x40000000 - real_size)
             continue;
 
-          if (addr > 0x40000000 - allocsize)
-            addr = 0x40000000 - allocsize;
+          if (addr > 0x40000000 - real_size)
+            addr = 0x40000000 - real_size;
 
           grub_dprintf ("linux", "trying to allocate %u pages at %x\n",
                         (unsigned) real_mode_pages, (unsigned) addr);
@@ -215,19 +160,9 @@ allocate_pages (grub_size_t real_size, grub_size_t prot_size)
   if (!prot_mode_mem)
 	grub_fatal("Cannot allocate pages for VMLINUZ");
     
-  mmap_buf = grub_efi_allocate_pages (0, mmap_pages);
-  if (! mmap_buf)
-    {
-      grub_printf("cannot allocate efi mmap pages");
-      errnum = ERR_WONT_FIT;
-      goto fail;
-    }
-
-  grub_free (mmap);
   return 1;
 
  fail:
-  grub_free (mmap);
   free_pages ();
   return 0;
 }
@@ -245,7 +180,6 @@ big_linux_boot (void)
 {
   struct linux_kernel_params *params;
   struct grub_linux_kernel_header *lh;
-  grub_efi_uintn_t mmap_size;
   grub_efi_uintn_t map_key;
   grub_efi_uintn_t desc_size;
   grub_efi_uint32_t desc_version;
@@ -255,9 +189,7 @@ big_linux_boot (void)
 
   graphics_set_kernel_params (params);
 
-  mmap_size = find_mmap_size ();
-  if (grub_efi_get_memory_map (&mmap_size, mmap_buf, &map_key,
-			       &desc_size, &desc_version) <= 0)
+  if (grub_efi_get_memory_map (&map_key, &desc_size, &desc_version) <= 0)
     grub_fatal ("cannot get memory map");
 
   /* Pass e820 memmap. */
@@ -544,7 +476,6 @@ grub_load_initrd (char *initrd)
   grub_ssize_t size;
   grub_addr_t addr_min, addr_max;
   grub_addr_t addr;
-  grub_efi_uintn_t mmap_size;
   grub_efi_memory_descriptor_t *desc;
   grub_efi_memory_descriptor_t tdesc;
   grub_efi_uintn_t desc_size;
@@ -582,9 +513,8 @@ grub_load_initrd (char *initrd)
   addr_min = 0;
 
   /* Find the highest address to put the initrd.  */
-  mmap_size = find_mmap_size ();
   grub_dprintf(__func__, "addr_min: 0x%lx addr_max: 0x%lx mmap_size: %lu\n", addr_min, addr_max, mmap_size);
-  if (grub_efi_get_memory_map (&mmap_size, mmap_buf, 0, &desc_size, 0) <= 0)
+  if (grub_efi_get_memory_map (0, &desc_size, 0) <= 0)
     grub_fatal ("cannot get memory map");
 
   addr = 0;

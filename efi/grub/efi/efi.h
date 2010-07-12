@@ -52,9 +52,7 @@ void
 grub_efi_free_pages (grub_efi_physical_address_t address,
 		     grub_efi_uintn_t pages);
 int
-grub_efi_get_memory_map (grub_efi_uintn_t * memory_map_size,
-			 grub_efi_memory_descriptor_t * memory_map,
-			 grub_efi_uintn_t * map_key,
+grub_efi_get_memory_map (grub_efi_uintn_t * map_key,
 			 grub_efi_uintn_t * descriptor_size,
 			 grub_efi_uint32_t * descriptor_version);
 grub_efi_loaded_image_t *grub_efi_get_loaded_image (grub_efi_handle_t
@@ -71,6 +69,10 @@ void grub_efi_fini (void);
 void grub_efi_set_prefix (void);
 
 /* Variables.  */
+extern void *mmap_buf;
+extern grub_efi_uintn_t mmap_size;
+extern grub_efi_uintn_t mmap_pages;
+
 extern grub_efi_system_table_t *grub_efi_system_table;
 extern grub_efi_handle_t grub_efi_image_handle;
 

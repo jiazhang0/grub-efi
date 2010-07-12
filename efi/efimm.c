@@ -32,9 +32,11 @@
 #define BYTES_TO_PAGES(bytes)	((bytes) >> 12)
 #define PAGES_TO_BYTES(pages)	((pages) << 12)
 
-/* The size of a memory map obtained from the firmware. This must be
-   a multiplier of 4KB.  */
-#define MEMORY_MAP_SIZE	0x2000
+/* Global variables used to store memory map, its size, and the number of
+ * pages allocated for the buffer. */
+void *mmap_buf;
+grub_efi_uintn_t mmap_size;
+grub_efi_uintn_t mmap_pages;
 
 /* Maintain the list of allocated pages.  */
 struct allocated_page
@@ -205,11 +207,14 @@ grub_efi_free_pages (grub_efi_physical_address_t address,
 }
 
 /* Get the memory map as defined in the EFI spec. Return 1 if successful,
-   return 0 if partial, or return -1 if an error occurs.  */
+   return 0 if partial, or return -1 if an error occurs.
+
+   This function will allocate memory for (global) mmap_buf if there isn't
+   already a buffer allocated, and will free & reallocate if it needs to
+   be larger. */
+
 int
-grub_efi_get_memory_map (grub_efi_uintn_t *memory_map_size,
-			 grub_efi_memory_descriptor_t *memory_map,
-			 grub_efi_uintn_t *map_key,
+grub_efi_get_memory_map (grub_efi_uintn_t *map_key,
 			 grub_efi_uintn_t *descriptor_size,
 			 grub_efi_uint32_t *descriptor_version)
 {
@@ -217,6 +222,7 @@ grub_efi_get_memory_map (grub_efi_uintn_t *memory_map_size,
   grub_efi_boot_services_t *b;
   grub_efi_uintn_t key;
   grub_efi_uint32_t version;
+  grub_efi_uintn_t tmp_mmap_size;
 
   /* Allow some parameters to be missing.  */
   if (! map_key)
@@ -224,16 +230,35 @@ grub_efi_get_memory_map (grub_efi_uintn_t *memory_map_size,
   if (! descriptor_version)
     descriptor_version = &version;
 
-  b = grub_efi_system_table->boot_services;
-  status = Call_Service_5 (b->get_memory_map,
-			      memory_map_size, memory_map, map_key,
+  while (1)
+    {
+      b = grub_efi_system_table->boot_services;
+      tmp_mmap_size = PAGES_TO_BYTES(mmap_pages);
+      status = Call_Service_5 (b->get_memory_map,
+			      &tmp_mmap_size, mmap_buf, map_key,
 			      descriptor_size, descriptor_version);
-  if (status == GRUB_EFI_SUCCESS)
-    return 1;
-  else if (status == GRUB_EFI_BUFFER_TOO_SMALL)
-    return 0;
-  else
-    return -1;
+      if (status == GRUB_EFI_SUCCESS)
+        {
+          mmap_size = tmp_mmap_size;
+          return 1;
+        }
+      else if (status != GRUB_EFI_BUFFER_TOO_SMALL)
+        return -1;
+
+      /* we need a larger buffer */
+      if (mmap_buf)
+        grub_efi_free_pages ((grub_addr_t) mmap_buf, mmap_pages);
+
+      /* get 1 more page than we need, just in case */
+      mmap_pages = BYTES_TO_PAGES(tmp_mmap_size + 4095) + 1;
+      mmap_buf = grub_efi_allocate_pages (0, mmap_pages);
+      if (! mmap_buf)
+        {
+          mmap_pages = 0;
+          grub_printf ("cannot allocate memory for memory map");
+          return -1;
+        }
+    }
 }
 
 #define MMAR_DESC_LENGTH	20
@@ -345,33 +370,16 @@ static void
 update_e820_map (struct e820_entry *e820_map,
 		 int *e820_nr_map)
 {
-  grub_efi_memory_descriptor_t *memory_map;
-  grub_efi_uintn_t map_size;
   grub_efi_uintn_t desc_size;
 
-  /* Prepare a memory region to store memory map.  */
-  memory_map = grub_efi_allocate_pages (0, BYTES_TO_PAGES (MEMORY_MAP_SIZE));
-  if (! memory_map)
-    {
-      grub_printf ("cannot allocate memory");
-      return;
-    }
-
-  /* Obtain descriptors for available memory.  */
-  map_size = MEMORY_MAP_SIZE;
-
-  if (grub_efi_get_memory_map (&map_size, memory_map, 0, &desc_size, 0) < 0)
+  if (grub_efi_get_memory_map (0, &desc_size, 0) < 0)
     {
       grub_printf ("cannot get memory map");
       return;
     }
 
   e820_map_from_efi_map (e820_map, e820_nr_map,
-			 memory_map, desc_size, map_size);
-
-  /* Release the memory map.  */
-  grub_efi_free_pages ((grub_addr_t) memory_map,
-		       BYTES_TO_PAGES (MEMORY_MAP_SIZE));
+			 mmap_buf, desc_size, mmap_size);
 }
 
 /* Simulated memory sizes. */
