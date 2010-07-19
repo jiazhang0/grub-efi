@@ -68,7 +68,7 @@ RELOC_FLAGS = $(STAGE2_CFLAGS) -I$(top_srcdir)/stage1 \
 
 noinst_LIBRARIES = libgrubefi.a
 libgrubefi_a_SOURCES = $(EFI_ARCH)/callwrap.c eficore.c efimm.c efimisc.c \
-	eficon.c efidisk.c graphics.c efigraph.c efiuga.c \
+	eficon.c efidisk.c graphics.c efigraph.c efiuga.c efidp.c \
 	font_8x16.c efiserial.c $(EFI_ARCH)/loader/linux.c efichainloader.c \
 	xpm.c pxe.c efitftp.c
 libgrubefi_a_CFLAGS = $(RELOC_FLAGS) -nostdinc

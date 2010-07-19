@@ -43,4 +43,16 @@ int grub_get_drive_partition_from_bdev_handle (grub_efi_handle_t handle,
 char *grub_efi_file_path_to_path_name (grub_efi_device_path_t *file_path);
 void grub_load_saved_default (grub_efi_handle_t dev_handle);
 
+grub_efi_device_path_t *
+find_last_device_path (const grub_efi_device_path_t *dp);
+grub_efi_device_path_t *
+duplicate_device_path (const grub_efi_device_path_t *dp);
+int
+compare_device_paths (const grub_efi_device_path_t *dp1,
+		      const grub_efi_device_path_t *dp2);
+grub_efi_device_path_t *
+device_path_from_utf8 (const char *device);
+
+extern grub_efi_guid_t simple_file_system_guid;
+
 #endif /* ! GRUB_EFI_MISC_HEADER */

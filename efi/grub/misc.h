@@ -36,6 +36,10 @@ void grub_real_dprintf (const char *file,
 void grub_exit (void) __attribute__ ((noreturn));
 void grub_abort (void) __attribute__ ((noreturn));
 void grub_fatal (const char *fmt, ...) __attribute__ ((noreturn));
+grub_size_t grub_utf8_char_len(grub_uint8_t ch);
+grub_uint32_t grub_utf8_to_utf32(const grub_uint8_t *src, grub_size_t length);
+void grub_utf8_to_utf16(const grub_uint8_t *src, grub_size_t srclen,
+			grub_uint16_t *dst, grub_size_t dstlen);
 grub_uint8_t *grub_utf16_to_utf8 (grub_uint8_t * dest,
 				  grub_uint16_t * src, grub_size_t size);
 

@@ -108,6 +108,79 @@ grub_real_dprintf (const char *file, const int line, const char *condition,
   va_end (args);
 }
 
+grub_size_t
+grub_utf8_char_len(grub_uint8_t ch)
+{
+  return ((0xe5000000 >> ((ch >> 3) & 0x1e)) & 3) + 1;
+}
+
+#define UTF8_SHIFT_AND_MASK(unicode, byte)  (unicode)<<=6; (unicode) |= (0x3f & (byte))
+
+/* convert utf8 to utf32 */
+grub_uint32_t
+grub_utf8_to_utf32(const grub_uint8_t *src, grub_size_t length)
+{
+  grub_uint32_t unicode;
+
+  switch (length)
+    {
+    case 1:
+      return src[0];
+    case 2:
+      unicode = src[0] & 0x1f;
+      UTF8_SHIFT_AND_MASK(unicode, src[1]);
+      return unicode;
+    case 3:
+      unicode = src[0] & 0x0f;
+      UTF8_SHIFT_AND_MASK(unicode, src[1]);
+      UTF8_SHIFT_AND_MASK(unicode, src[2]);
+      return unicode;
+    case 4:
+      unicode = src[0] & 0x07;
+      UTF8_SHIFT_AND_MASK(unicode, src[1]);
+      UTF8_SHIFT_AND_MASK(unicode, src[2]);
+      UTF8_SHIFT_AND_MASK(unicode, src[3]);
+      return unicode;
+    default:
+      return 0xffff;
+    }
+}
+
+/* convert utf8 to utf16 */
+void
+grub_utf8_to_utf16(const grub_uint8_t *src, grub_size_t srclen,
+		   grub_uint16_t *dst, grub_size_t dstlen)
+{
+  const grub_uint8_t *end = src + srclen;
+  grub_efi_char16_t *dstend = dst + dstlen;
+
+  while (src < end && dst < dstend)
+    {
+      grub_size_t len = grub_utf8_char_len(*src);
+      /* get the utf32 codepoint */
+      grub_uint32_t codepoint = grub_utf8_to_utf32(src, len);
+
+      /* convert that codepoint to utf16 codepoints */
+      if (codepoint <= 0xffff)
+	{
+	  /* it's a single utf16 character */
+	  *dst++ = (grub_efi_char16_t) codepoint;
+	}
+      else
+	{
+	  /* it's multiple utf16 characters, with surrogate pairs */
+	  codepoint = codepoint - 0x10000;
+	  *dst++ = (grub_efi_char16_t) ((codepoint >> 10) + 0xd800);
+	  *dst++ = (grub_efi_char16_t) ((codepoint & 0x3ff) + 0xdc00);
+	}
+
+	src += len;
+    }
+
+  if (dst < dstend)
+    *dst = 0;
+}
+
 /* Convert UTF-16 to UTF-8.  */
 grub_uint8_t *
 grub_utf16_to_utf8 (grub_uint8_t *dest, grub_uint16_t *src,

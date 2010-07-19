@@ -926,7 +926,7 @@ static struct builtin builtin_default =
 };
 
 
-#ifdef GRUB_UTIL
+#if defined(GRUB_UTIL) || defined(PLATFORM_EFI)
 /* device */
 static int
 device_func (char *arg, int flags)
@@ -934,15 +934,16 @@ device_func (char *arg, int flags)
   char *drive = arg;
   char *device;
 
+  /* Get the device argument.  */
+  device = skip_to (0, drive);
+
+  nul_terminate (drive);
+  /* Terminate DEVICE.  */
+  nul_terminate (device);
+
   /* Get the drive number from DRIVE.  */
   if (! set_device (drive))
     return 1;
-
-  /* Get the device argument.  */
-  device = skip_to (0, drive);
-  
-  /* Terminate DEVICE.  */
-  nul_terminate (device);
 
   if (! *device || ! check_device (device))
     {
@@ -951,7 +952,7 @@ device_func (char *arg, int flags)
     }
 
   assign_device_name (current_drive, device);
-  
+
   return 0;
 }
 
@@ -962,9 +963,20 @@ static struct builtin builtin_device =
   BUILTIN_MENU | BUILTIN_CMDLINE | BUILTIN_HELP_LIST,
   "device DRIVE DEVICE",
   "Specify DEVICE as the actual drive for a BIOS drive DRIVE. This command"
-  " can be used only in the grub shell."
+  " can be used only in the grub shell and in EFI."
 };
-#endif /* GRUB_UTIL */
+#endif /* defined(GRUB_UTIL) || defined(PLATFORM_EFI) */
+#ifdef PLATFORM_EFI
+static struct builtin builtin_efimap =
+{
+  "efimap",
+  device_func,
+  BUILTIN_MENU | BUILTIN_CMDLINE | BUILTIN_HELP_LIST,
+  "efimap DRIVE DEVICE",
+  "Specify DEVICE as the actual drive for a BIOS drive DRIVE. This command"
+  " can be used only in EFI."
+};
+#endif /* PLATFORM_EFI */
 
 
 #ifdef SUPPORT_NETBOOT
@@ -5196,9 +5208,9 @@ struct builtin *builtin_table[] =
   &builtin_configfile,
   &builtin_debug,
   &builtin_default,
-#ifdef GRUB_UTIL
+#if defined(GRUB_UTIL) || defined(PLATFORM_EFI)
   &builtin_device,
-#endif /* GRUB_UTIL */
+#endif /* defined(GRUB_UTIL) || defined(PLATFORM_EFI) */
 #ifdef SUPPORT_NETBOOT
   &builtin_dhcp,
 #endif /* SUPPORT_NETBOOT */
@@ -5209,6 +5221,9 @@ struct builtin *builtin_table[] =
 #ifdef GRUB_UTIL
   &builtin_dump,
 #endif /* GRUB_UTIL */
+#ifdef PLATFORM_EFI
+  &builtin_efimap,
+#endif
 #ifndef PLATFORM_EFI
   &builtin_embed,
 #endif

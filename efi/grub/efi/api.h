@@ -90,6 +90,11 @@
     { 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b } \
   }
 
+#define GRUB_EFI_DEVICE_PATH_FROM_TEXT_GUID	\
+  { 0x05c99a21, 0xc70f, 0x4ad2, \
+    { 0x8a, 0x5f, 0x35, 0xdf, 0x33, 0x43, 0xf5, 0x1e } \
+  }
+
 #define GRUB_EFI_GRAPHICS_OUTPUT_GUID	\
   { 0x9042a9de, 0x23dc, 0x4a38, \
     { 0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a } \
@@ -553,7 +558,7 @@ struct grub_efi_hard_drive_device_path
   grub_efi_uint32_t partition_number;
   grub_efi_lba_t partition_start;
   grub_efi_lba_t partition_size;
-  grub_efi_uint8_t partition_signature[8];
+  grub_efi_uint8_t partition_signature[16];
   grub_efi_uint8_t mbr_type;
   grub_efi_uint8_t signature_type;
 };
@@ -614,6 +619,13 @@ struct grub_efi_bios_device_path
   char description[0];
 };
 typedef struct grub_efi_bios_device_path grub_efi_bios_device_path_t;
+
+struct grub_efi_device_path_from_text
+{
+  grub_efi_device_path_t * (*convert_text_to_device_node) (const grub_efi_char16_t *text_device_node);
+  grub_efi_device_path_t * (*convert_text_to_device_path) (const grub_efi_char16_t *text_device_path);
+};
+typedef struct grub_efi_device_path_from_text grub_efi_device_path_from_text_t;
 
 struct grub_efi_open_protocol_information_entry
 {

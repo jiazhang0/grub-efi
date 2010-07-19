@@ -38,99 +38,11 @@ struct grub_efidisk_data
 /* GUIDs.  */
 static grub_efi_guid_t disk_io_guid = GRUB_EFI_DISK_IO_GUID;
 static grub_efi_guid_t block_io_guid = GRUB_EFI_BLOCK_IO_GUID;
+static grub_efi_guid_t device_path_from_text_guid = GRUB_EFI_DEVICE_PATH_FROM_TEXT_GUID;
 
 static struct grub_efidisk_data *fd_devices;
 static struct grub_efidisk_data *hd_devices;
 static struct grub_efidisk_data *cd_devices;
-
-/* Duplicate a device path.  */
-static grub_efi_device_path_t *
-duplicate_device_path (const grub_efi_device_path_t *dp)
-{
-  grub_efi_device_path_t *p;
-  grub_size_t total_size = 0;
-
-  for (p = (grub_efi_device_path_t *) dp;
-       ;
-       p = GRUB_EFI_NEXT_DEVICE_PATH (p))
-    {
-      total_size += GRUB_EFI_DEVICE_PATH_LENGTH (p);
-      if (GRUB_EFI_END_ENTIRE_DEVICE_PATH (p))
-	break;
-    }
-
-  p = grub_malloc (total_size);
-  if (! p)
-    return 0;
-
-  grub_memcpy (p, dp, total_size);
-  return p;
-}
-
-/* Return the device path node right before the end node.  */
-static grub_efi_device_path_t *
-find_last_device_path (const grub_efi_device_path_t *dp)
-{
-  grub_efi_device_path_t *next, *p;
-
-  if (GRUB_EFI_END_ENTIRE_DEVICE_PATH (dp))
-    return 0;
-
-  for (p = (grub_efi_device_path_t *) dp, next = GRUB_EFI_NEXT_DEVICE_PATH (p);
-       ! GRUB_EFI_END_ENTIRE_DEVICE_PATH (next);
-       p = next, next = GRUB_EFI_NEXT_DEVICE_PATH (next))
-    ;
-
-  return p;
-}
-
-/* Compare device paths.  */
-static int
-compare_device_paths (const grub_efi_device_path_t *dp1,
-		      const grub_efi_device_path_t *dp2)
-{
-  if (! dp1 || ! dp2)
-    /* Return non-zero.  */
-    return 1;
-
-  while (1)
-    {
-      grub_efi_uint8_t type1, type2;
-      grub_efi_uint8_t subtype1, subtype2;
-      grub_efi_uint16_t len1, len2;
-      int ret;
-
-      type1 = GRUB_EFI_DEVICE_PATH_TYPE (dp1);
-      type2 = GRUB_EFI_DEVICE_PATH_TYPE (dp2);
-
-      if (type1 != type2)
-	return (int) type2 - (int) type1;
-
-      subtype1 = GRUB_EFI_DEVICE_PATH_SUBTYPE (dp1);
-      subtype2 = GRUB_EFI_DEVICE_PATH_SUBTYPE (dp2);
-
-      if (subtype1 != subtype2)
-	return (int) subtype1 - (int) subtype2;
-
-      len1 = GRUB_EFI_DEVICE_PATH_LENGTH (dp1);
-      len2 = GRUB_EFI_DEVICE_PATH_LENGTH (dp2);
-
-      if (len1 != len2)
-	return (int) len1 - (int) len2;
-
-      ret = grub_memcmp ((char *)dp1, (char *)dp2, len1);
-      if (ret != 0)
-	return ret;
-
-      if (GRUB_EFI_END_ENTIRE_DEVICE_PATH (dp1))
-	break;
-
-      dp1 = (grub_efi_device_path_t *) ((char *) dp1 + len1);
-      dp2 = (grub_efi_device_path_t *) ((char *) dp2 + len2);
-    }
-
-  return 0;
-}
 
 static struct grub_efidisk_data *
 make_devices (void)
@@ -647,4 +559,182 @@ grub_get_drive_partition_from_bdev_handle (grub_efi_handle_t handle,
     }
 
   return 0;
+}
+
+int
+check_device (const char *device)
+{
+  grub_efi_device_path_t *dp;
+
+  dp = device_path_from_utf8(device);
+  if (dp == NULL)
+    return 0;
+
+  grub_free(dp);
+  return 1;
+}
+
+static void
+swap_devices (struct grub_efidisk_data *d0,
+	      struct grub_efidisk_data *d1)
+{
+  struct grub_efidisk_data tmp;
+
+  if (!d0 || !d1)
+    return;
+
+  memcpy(&tmp, d1, sizeof(*d1));
+
+  memcpy(&d0->handle, &d1->handle, sizeof(d1->handle));
+  d0->device_path = d1->device_path;
+  d0->last_device_path = d1->last_device_path;
+  d0->block_io = d1->block_io;
+  d0->disk_io = d1->disk_io;
+
+  memcpy(d1->handle, tmp.handle, sizeof(tmp.handle));
+  d1->device_path = tmp.device_path;
+  d1->last_device_path = tmp.last_device_path;
+  d1->block_io = tmp.block_io;
+  d1->disk_io = tmp.disk_io;
+}
+
+static int
+compare_hd_device_paths(grub_efi_hard_drive_device_path_t *hd0,
+			grub_efi_hard_drive_device_path_t *hd1)
+{
+  grub_efi_uint64_t x;
+  int sigsize;
+
+  if ((x = hd1->partition_number - hd0->partition_number))
+    return x;
+
+  if ((x = hd1->partition_start - hd0->partition_start))
+    return x;
+
+
+  if ((x = hd1->partition_size - hd0->partition_size))
+    return x;
+
+  if ((x = hd1->signature_type - hd0->signature_type))
+    return x;
+
+  switch (hd0->signature_type)
+    {
+    case 1:
+      sigsize = 4;
+      break;
+    case 2:
+      sigsize = 16;
+      break;
+    default:
+      sigsize = 0;
+      break;
+    }
+  x = grub_memcmp((char *)hd0->partition_signature,
+                  (char *)hd1->partition_signature, sigsize);
+  return x;
+}
+
+static grub_efi_device_path_t *
+get_parent_of_disk(grub_efi_device_path_t *hd)
+{
+  grub_efi_uintn_t num_handles;
+  grub_efi_handle_t *handles;
+  grub_efi_handle_t *handle;
+  grub_efi_device_path_t *ret;
+
+  handles = grub_efi_locate_handle (GRUB_EFI_BY_PROTOCOL,
+				     &simple_file_system_guid,
+                                    0, &num_handles);
+  for (handle = handles; num_handles--; handle++)
+    {
+      grub_efi_device_path_t *fsdp, *hddp;
+
+      fsdp = grub_efi_get_device_path (*handle);
+      if (!fsdp)
+	continue;
+      hddp = find_last_device_path(fsdp);
+
+      if (compare_hd_device_paths((grub_efi_hard_drive_device_path_t *)hddp,
+				   (grub_efi_hard_drive_device_path_t *)hd) == 0)
+        {
+	  grub_efi_device_path_t *p;
+	  ret = duplicate_device_path((grub_efi_device_path_t *)fsdp);
+	  if (!ret)
+	    return NULL;
+	  for (p = ret; ; p = GRUB_EFI_NEXT_DEVICE_PATH(p))
+	    {
+	      if (GRUB_EFI_END_ENTIRE_DEVICE_PATH(p))
+		break;
+	      if ((GRUB_EFI_DEVICE_PATH_TYPE(p) ==
+			GRUB_EFI_MEDIA_DEVICE_PATH_TYPE)
+		      && (GRUB_EFI_DEVICE_PATH_SUBTYPE(p) ==
+				GRUB_EFI_HARD_DRIVE_DEVICE_PATH_SUBTYPE))
+	        {
+		  p->type = GRUB_EFI_END_DEVICE_PATH_TYPE;
+		  p->subtype = GRUB_EFI_END_ENTIRE_DEVICE_PATH_SUBTYPE;
+		  p->length[0] = 4;
+		  p->length[1] = 0;
+		  break;
+		}
+	    }
+	  return ret;
+	}
+    }
+  return NULL;
+}
+
+void
+assign_device_name (int drive, const char *device)
+{
+  grub_efi_device_path_t *dp0, *dp1;
+  struct grub_efidisk_data *devices;
+  struct grub_efidisk_data *d, *d0 = NULL, *d1 = NULL;
+  int n = -1;
+
+  dp0 = device_path_from_utf8(device);
+  if (!dp0)
+    return;
+
+  dp1 = get_parent_of_disk(dp0);
+  grub_free(dp0);
+  if (!dp1)
+    return;
+
+  if (drive & 0x80)
+    {
+      drive -= 0x80;
+      devices = hd_devices;
+    }
+  else
+    {
+      devices = cd_devices;
+      drive -= 0x100;
+    }
+
+  for (d = devices; d; d = d->next)
+    {
+      if (!d->device_path)
+	continue;
+
+      if (++n == drive)
+	d0 = d;
+
+      int x;
+      if (!(x = compare_device_paths(dp1, d->device_path)))
+	d1 = d;
+
+      if (d0 && d1)
+        {
+	  /* if they're the same node, that just means it's already at
+	   * the right position. */
+	  if (d0 != d1)
+	    {
+	      swap_devices(d0, d1);
+	      grub_free(dp1);
+	      return;
+	    }
+	}
+    }
+  grub_free(dp1);
 }
