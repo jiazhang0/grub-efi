@@ -378,6 +378,11 @@ extern void *grub_scratch_mem;
 #define strspn grub_strspn
 #define strcspn grub_strcspn
 #define strtok_r grub_strtok_r
+#define strchr grub_strchr
+#define strrchr grub_strrchr
+#define strnchr grub_strnchr
+#define strncpy grub_strncpy
+#define strncasecmp grub_strncasecmp
 #endif /* WITHOUT_LIBC_STUBS */
 
 #ifndef ASM_FILE
@@ -917,6 +922,12 @@ char *grub_stpncpy (char *dest, const char *src, int n);
 int grub_strspn(const char *s, const char *accept);
 int grub_strcspn(const char *s, const char *reject);
 char *grub_strtok_r(char *s, const char *delim, char **ptrptr);
+char *grub_strchr (const char *s, int c);
+char *grub_strrchr (const char *s, int c);
+char *grub_strnchr (const char *s, int c);
+int grub_strnlen (const char *s, int n);
+char *grub_strncpy (char *new, const char *s, int n);
+int grub_strncasecmp(const char *s0, const char *s1, int n);
 
 #ifndef GRUB_UTIL
 typedef unsigned long grub_jmp_buf[8];

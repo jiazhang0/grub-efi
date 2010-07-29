@@ -256,6 +256,19 @@ stop_floppy (void)
   /* NOTUSED */
 }
 
+char *
+grub_strndup (const char *s, int n)
+{
+  int l = grub_strnlen(s, n);
+  char *new = grub_malloc(l + 1);
+
+  if (new == NULL)
+    return NULL;
+
+  new[l] = '\0';
+  return grub_strncpy(new, s, l);
+}
+
 int
 safe_parse_maxulong (char **str_ptr, unsigned long *myulong_ptr)
 {
@@ -308,34 +321,6 @@ safe_parse_maxulong (char **str_ptr, unsigned long *myulong_ptr)
   *myulong_ptr = myulong;
 
   return 1;
-}
-
-char *
-grub_strchr (const char *s, int c)
-{
-  while (*s)
-    {
-      if (*s == c)
-	return (char *) s;
-      s++;
-    }
-
-  return 0;
-}
-
-char *
-grub_strrchr (const char *s, int c)
-{
-  char *p = 0;
-
-  while (*s)
-    {
-      if (*s == c)
-	p = (char *) s;
-      s++;
-    }
-
-  return p;
 }
 
 int
@@ -506,7 +491,7 @@ grub_set_config_file (char *path_name)
 	       DEFAULT_SAVED_DEFAULT_FILE_NAME);
 }
 
-static grub_efi_guid_t simple_file_system_guid = GRUB_EFI_SIMPLE_FILE_SYSTEM_GUID;
+grub_efi_guid_t simple_file_system_guid = GRUB_EFI_SIMPLE_FILE_SYSTEM_GUID;
 
 static grub_efi_file_t *
 simple_open_file(grub_efi_handle_t dev_handle,

@@ -28,8 +28,6 @@
 	grub_real_dprintf(__FILE__, __LINE__, condition, fmt, ## args)
 
 char *grub_stpcpy (char *dest, const char *src);
-char *grub_strchr (const char *s, int c);
-char *grub_strrchr (const char *s, int c);
 void grub_real_dprintf (const char *file,
 			const int line,
 			const char *condition,
@@ -43,6 +41,9 @@ grub_uint8_t *grub_utf16_to_utf8 (grub_uint8_t * dest,
 
 void *grub_malloc (grub_size_t size);
 void grub_free (void *ptr);
+
+char *grub_strndup (const char *s, int n);
+#define strndup grub_strndup
 
 int safe_parse_maxulong (char **str_ptr, unsigned long *myulong_ptr);
 

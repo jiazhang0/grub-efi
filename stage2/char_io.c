@@ -1462,6 +1462,92 @@ grub_strtok_r(char *s, const char *delim, char **ptrptr) {
   return tmp;
 }
 
+char *
+grub_strchr (const char *s, int c)
+{
+  while (*s)
+    {
+      if (*s == c)
+	return (char *) s;
+      s++;
+    }
+
+  return 0;
+}
+
+char *
+grub_strnchr (const char *s, int c)
+{
+  while (*s)
+    {
+      if (*s != c)
+	return (char *) s;
+      s++;
+    }
+
+  return 0;
+}
+
+char *
+grub_strrchr (const char *s, int c)
+{
+  char *p = 0;
+
+  while (*s)
+    {
+      if (*s == c)
+	p = (char *) s;
+      s++;
+    }
+
+  return p;
+}
+
+int
+grub_strnlen (const char *s, int n)
+{
+  int i;
+
+  if (n == 0)
+    return 0;
+
+  for (i = 0; s[i] != '\0' && i < n; i++)
+    ;
+  return i;
+}
+
+char *
+grub_strncpy(char *new, const char *s, int n)
+{
+  int i;
+
+  for (i = 0; s[i] != '\0' && i < n; i++)
+    new[i] = s[i];
+  return new;
+}
+
+int
+grub_strncasecmp(const char *s0, const char *s1, int n)
+{
+  int c0, c1;
+
+  if (s0 == s1 || n == 0)
+    return 0;
+
+  do {
+    c0 = *s0 & ~0x20;
+    c1 = *s1 & ~0x20;
+
+    if (--n == 0 || c0 == '\0')
+      break;
+
+    *s0++;
+    *s1++;
+  } while (c0 == c1);
+
+  return (c0 > c1 ? 1 : c0 < c1 ? -1 : 0);
+}
+
 #endif /* ! STAGE1_5 */
 
 #ifdef GRUB_UTIL
