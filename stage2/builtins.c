@@ -5187,7 +5187,26 @@ static struct builtin builtin_vbeprobe =
   " the information about only the mode."
 };
 #endif /* ! PLATFORM_EFI */
-  
+
+
+/* version */
+static int
+version_func (char *arg, int flags)
+{
+  grub_printf ("\n    GNU GRUB  version %s  (%dK lower / %dK upper memory)\n\n",
+                version_string, mbi.mem_lower, mbi.mem_upper);
+  return 0;
+}
+
+static struct builtin builtin_version =
+{
+  "version",
+  version_func,
+  BUILTIN_CMDLINE | BUILTIN_HELP_LIST,
+  "version",
+  "Display grub version."
+};
+
 
 /* The table of builtin commands. Sorted in dictionary order.  */
 struct builtin *builtin_table[] =
@@ -5310,5 +5329,6 @@ struct builtin *builtin_table[] =
   &builtin_vbeprobe,
 #endif
   &builtin_verbose,
+  &builtin_version,
   0
 };
