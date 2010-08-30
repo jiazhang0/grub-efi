@@ -587,19 +587,19 @@ get_next_param(char *pos, char **end, char *tmp)
     **end = *tmp;
 
   openparen = grub_strchr(pos, '(');
-  if (*openparen)
+  if (openparen && *openparen)
     {
       pos = grub_strnchr(openparen + 1, ' ');
       comma = grub_strchr(pos, ',');
       closeparen = grub_strchr(pos, ')');
 
-      if (*comma)
+      if (comma && *comma)
 	{
 	  *tmp = *comma;
 	  *comma = '\0';
 	  *end = comma;
 	}
-      else if (*closeparen)
+      else if (closeparen && *closeparen)
 	{
 	  *tmp = *closeparen;
 	  *closeparen = '\0';
@@ -609,19 +609,19 @@ get_next_param(char *pos, char **end, char *tmp)
     }
 
   comma = grub_strchr(pos, ',');
-  if (*comma)
+  if (comma && *comma)
     {
       pos = grub_strnchr(comma + 1, ' ');
       comma = grub_strchr(pos, ',');
       closeparen = grub_strchr(pos, ')');
 
-      if (*comma)
+      if (comma && *comma)
 	{
 	  *tmp = *comma;
 	  *comma = '\0';
 	  *end = comma;
 	}
-      else if (*closeparen)
+      else if (closeparen && *closeparen)
 	{
 	  *tmp = *closeparen;
 	  *closeparen = '\0';
@@ -631,7 +631,7 @@ get_next_param(char *pos, char **end, char *tmp)
     }
 
   closeparen = grub_strchr(pos, ')');
-  if (*closeparen)
+  if (closeparen && *closeparen)
     pos = grub_strnchr(closeparen + 1, ' ');
 
   return pos;
