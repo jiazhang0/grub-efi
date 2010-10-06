@@ -320,7 +320,6 @@ static char *get_pxe_file_dir(EFI_PXE_BASE_CODE *pxe)
 
 	*DirEnd = '\0';
 
-	printf("FileDir: \"%s\"\n", FileDir);
 	return FileDir;
 }
 

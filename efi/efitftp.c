@@ -29,6 +29,55 @@ struct tftp_info tftp_info = {
  * BootpBootFile: X86PC/UNDI/pxelinux/bootx64.efi
  */
 
+static grub_efi_status_t tftp_get_file_size_defective_buffer_fallback(
+	char *Filename,
+	grub_efi_uintn_t *Size)
+{
+	EFI_PXE_BASE_CODE_TFTP_OPCODE OpCode = EFI_PXE_BASE_CODE_TFTP_READ_FILE;
+	char *Buffer = NULL;
+	grub_efi_boolean_t Overwrite = 0;
+	grub_efi_boolean_t DontUseBuffer = 0;
+	grub_efi_uint64_t BufferSize = 4096;
+	grub_efi_uintn_t BlockSize = 512;
+	grub_efi_status_t rc = GRUB_EFI_BUFFER_TOO_SMALL;
+	char *FullPath = NULL;
+
+	while (rc == GRUB_EFI_BUFFER_TOO_SMALL) {
+		char *NewBuffer;
+
+		if (Buffer) {
+			grub_free(Buffer);
+			Buffer = NULL;
+		}
+		BufferSize *= 2;
+		NewBuffer = grub_malloc(BufferSize);
+		if (!NewBuffer)
+			return GRUB_EFI_OUT_OF_RESOURCES;
+		Buffer = NewBuffer;
+
+		if (tftp_info.BasePath) {
+			int PathSize = 0;
+			PathSize = strlen(tftp_info.BasePath) + 2 +
+				   strlen(Filename);
+			FullPath = grub_malloc(PathSize);
+			grub_sprintf(FullPath, "%s/%s", tftp_info.BasePath,
+				     Filename);
+		} else {
+			FullPath = grub_malloc(strlen(Filename));
+			strcpy(FullPath, Filename);
+		}
+
+		rc = Call_Service_10(tftp_info.Pxe->Mtftp, tftp_info.Pxe,
+			OpCode, Buffer, Overwrite, &BufferSize, &BlockSize,
+			tftp_info.ServerIp, FullPath, NULL, DontUseBuffer);
+		if (rc == GRUB_EFI_SUCCESS || rc == GRUB_EFI_BUFFER_TOO_SMALL)
+			*Size = BufferSize;
+	}
+	grub_free(FullPath);
+	grub_free(Buffer);
+	return rc;
+}
+
 grub_efi_status_t tftp_get_file_size(
 	char *Filename,
 	grub_efi_uintn_t *Size)
@@ -55,6 +104,8 @@ grub_efi_status_t tftp_get_file_size(
 	rc = Call_Service_10(tftp_info.Pxe->Mtftp, tftp_info.Pxe, OpCode,
 		Buffer, Overwrite, &BufferSize, &BlockSize, tftp_info.ServerIp,
 		FullPath, NULL, DontUseBuffer);
+	if (rc == GRUB_EFI_BUFFER_TOO_SMALL)
+		rc = tftp_get_file_size_defective_buffer_fallback(Filename, Size);
 	if (rc == GRUB_EFI_SUCCESS)
 		*Size = BufferSize;
 	grub_free(FullPath);
@@ -152,7 +203,7 @@ efi_tftp_dir (char *dirname)
 	filemax = -1;
 
 	rc = tftp_get_file_size(name, &size);
-	if (rc == 0) {
+	if (rc == GRUB_EFI_SUCCESS) {
 		tftp_info.LastPath = grub_malloc(strlen(name) + 1);
 		sprintf(tftp_info.LastPath, "%s", name);
 		filemax = size;
