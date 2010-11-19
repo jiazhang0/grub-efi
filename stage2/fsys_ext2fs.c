@@ -25,7 +25,7 @@
 static int mapblock1, mapblock2;
 
 /* sizes are always in bytes, BLOCK values are always in DEV_BSIZE (sectors) */
-#define DEV_BSIZE 512
+#define DEV_BSIZE get_sector_size(current_drive)
 
 /* include/linux/fs.h */
 #define BLOCK_SIZE 1024		/* initial block size for superblock read */
@@ -33,6 +33,7 @@ static int mapblock1, mapblock2;
 #define WHICH_SUPER 1
 /* kind of from fs/ext2/super.c */
 #define SBLOCK (WHICH_SUPER * BLOCK_SIZE / DEV_BSIZE)	/* = 2 */
+#define SBOFF ((WHICH_SUPER * BLOCK_SIZE) % DEV_BSIZE)
 
 /* include/asm-i386/types.h */
 typedef __signed__ char __s8;
@@ -413,7 +414,7 @@ ext2fs_mount (void)
        && (! IS_PC_SLICE_TYPE_BSD_WITH_FS (current_slice, FS_EXT2FS))
        && (! IS_PC_SLICE_TYPE_BSD_WITH_FS (current_slice, FS_OTHER)))
       || part_length < (SBLOCK + (sizeof (struct ext2_super_block) / DEV_BSIZE))
-      || !devread (SBLOCK, 0, sizeof (struct ext2_super_block),
+      || !devread (SBLOCK, SBOFF, sizeof (struct ext2_super_block),
 		   (char *) SUPERBLOCK)
       || SUPERBLOCK->s_magic != EXT2_SUPER_MAGIC)
       retval = 0;

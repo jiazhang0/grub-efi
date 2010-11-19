@@ -44,6 +44,10 @@ static struct grub_efidisk_data *fd_devices;
 static struct grub_efidisk_data *hd_devices;
 static struct grub_efidisk_data *cd_devices;
 
+static int get_device_sector_bits(struct grub_efidisk_data *device);
+static int get_device_sector_size(struct grub_efidisk_data *device);
+static struct grub_efidisk_data *get_device_from_drive (int drive);
+
 static struct grub_efidisk_data *
 make_devices (void)
 {
@@ -190,7 +194,9 @@ name_devices (struct grub_efidisk_data *devices)
       m = d->block_io->media;
       if (GRUB_EFI_DEVICE_PATH_TYPE(dp) == GRUB_EFI_MESSAGING_DEVICE_PATH_TYPE)
 	{
-	  if (m->read_only && m->block_size > SECTOR_SIZE)
+	  /* XXX FIXME this won't work if we see write-protected disks with
+	   * 4k sectors */
+	  if (m->read_only && m->block_size > 0x200)
 	    {
 	      add_device (&cd_devices, d);
 	    } else
@@ -253,13 +259,12 @@ grub_efidisk_read (struct grub_efidisk_data *d, grub_disk_addr_t sector,
   grub_efi_disk_io_t *dio;
   grub_efi_block_io_t *bio;
   grub_efi_status_t status;
-  grub_efi_uint64_t sector_size;
+  grub_efi_uint64_t sector_size = get_device_sector_size(d);
 
   dio = d->disk_io;
   bio = d->block_io;
-  sector_size = d->block_io->media->block_size;
 
-  status = Call_Service_5 (dio->read ,
+  status = Call_Service_5 (dio->read,
 			   dio, bio->media->media_id,
 			   sector * sector_size,
 			   size * sector_size,
@@ -278,11 +283,10 @@ grub_efidisk_write (struct grub_efidisk_data *d, grub_disk_addr_t sector,
   grub_efi_disk_io_t *dio;
   grub_efi_block_io_t *bio;
   grub_efi_status_t status;
-  grub_efi_uint64_t sector_size;
+  grub_efi_uint64_t sector_size = get_device_sector_size(d);
 
   dio = d->disk_io;
   bio = d->block_io;
-  sector_size = d->block_io->media->block_size;
 
   grub_dprintf ("efidisk",
 		"writing 0x%x sectors at the sector 0x%x to ??\n",
@@ -311,6 +315,47 @@ grub_efidisk_fini (void)
   free_devices (fd_devices);
   free_devices (hd_devices);
   free_devices (cd_devices);
+}
+
+static int
+get_device_sector_size(struct grub_efidisk_data *device)
+{
+	return device->block_io->media->block_size;
+}
+
+int
+get_sector_size(int drive)
+{
+	struct grub_efidisk_data *device = get_device_from_drive(drive);
+	return get_device_sector_size(device);
+}
+
+/*
+ * ffz = Find First Zero in word. Undefined if no zero exists,
+ * so code should check against ~0UL first..
+ */
+static __inline__ unsigned int
+ffz (unsigned int word)
+{
+  __asm__ ("bsfl %1,%0"
+:	   "=r" (word)
+:	   "r" (~word));
+  return word;
+}
+#define log2(n) ffz(~(n))
+
+static int
+get_device_sector_bits(struct grub_efidisk_data *device)
+{
+	int sector_size = get_device_sector_size(device);
+	return log2(sector_size);
+}
+
+int
+get_sector_bits(int drive)
+{
+	int sector_size = get_sector_size(drive);
+	return log2(sector_size);
 }
 
 static struct grub_efidisk_data *
@@ -456,7 +501,6 @@ grub_get_drive_partition_from_bdev_handle (grub_efi_handle_t handle,
   unsigned long partition_start, partition_len, part_offset, part_extoffset;
   unsigned long gpt_offset;
   int gpt_count, gpt_size;
-  char buf[SECTOR_SIZE];
   auto int find_bdev (struct grub_efidisk_data *c);
 
   int find_bdev (struct grub_efidisk_data *c)
@@ -541,6 +585,7 @@ grub_get_drive_partition_from_bdev_handle (grub_efi_handle_t handle,
   if (! found)
     return 0;
 
+  char buf[get_sector_size(drv)];
   part = 0xFFFFFF;
   while (next_partition (drv, 0, &part, &part_type,
 			 &partition_start, &partition_len,

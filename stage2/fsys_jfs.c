@@ -207,19 +207,20 @@ int
 jfs_mount (void)
 {
 	struct jfs_superblock super;
+	int sector_bits = get_sector_bits(current_drive);
 
-	if (part_length < MINJFS >> SECTOR_BITS
-	    || !devread (SUPER1_OFF >> SECTOR_BITS, 0,
+	if (part_length < MINJFS >> sector_bits
+	    || !devread (SUPER1_OFF >> sector_bits, 0,
 			 sizeof(struct jfs_superblock), (char *)&super)
 	    || (super.s_magic != JFS_MAGIC)
-	    || !devread ((AITBL_OFF >> SECTOR_BITS) + FILESYSTEM_I,
+	    || !devread ((AITBL_OFF >> sector_bits) + FILESYSTEM_I,
 			 0, DISIZE, (char*)fileset)) {
 		return 0;
 	}
 
 	jfs.bsize = super.s_bsize;
 	jfs.l2bsize = super.s_l2bsize;
-	jfs.bdlog = jfs.l2bsize - SECTOR_BITS;
+	jfs.bdlog = jfs.l2bsize - sector_bits;
 
 	return 1;
 }
@@ -387,9 +388,10 @@ int
 jfs_embed (int *start_sector, int needed_sectors)
 {
 	struct jfs_superblock super;
+	int sector_bits = get_sector_bits(current_drive);
 
 	if (needed_sectors > 63
-	    || !devread (SUPER1_OFF >> SECTOR_BITS, 0,
+	    || !devread (SUPER1_OFF >> sector_bits, 0,
 			 sizeof (struct jfs_superblock),
 			 (char *)&super)
 	    || (super.s_magic != JFS_MAGIC)) {

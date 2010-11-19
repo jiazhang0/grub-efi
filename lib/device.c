@@ -36,6 +36,9 @@
 #include <limits.h>
 #include <stdarg.h>
 
+#define SECTOR_SIZE 0x200
+#define SECTOR_BITS 9
+
 #ifdef __linux__
 # if !defined(__GLIBC__) || \
         ((__GLIBC__ < 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ < 1)))

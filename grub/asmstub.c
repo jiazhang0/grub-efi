@@ -107,6 +107,17 @@ static char *serial_device = 0;
 static unsigned int serial_speed;
 #endif /* SIMULATE_SLOWNESS_OF_SERIAL */
 
+#ifdef GRUB_UTIL
+int get_sector_size (int drive)
+{
+  return 0x200;
+}
+int get_sector_bits (int drive)
+{
+  return 9;
+}
+#endif /* GRUB_UTIL */
+
 /* This allocates page-aligned storage of the specified size, which must be
  * a multiple of the page size as determined by calling sysconf(_SC_PAGESIZE)
  */
@@ -1063,13 +1074,13 @@ biosdisk (int subfunc, int drive, struct geometry *geometry,
     _syscall5 (int, _llseek, uint, filedes, ulong, hi, ulong, lo,
 	       loff_t *, res, uint, wh);
 
-    offset = (loff_t) sector * (loff_t) SECTOR_SIZE;
+    offset = (loff_t) sector * (loff_t) get_sector_size(drive);
     if (_llseek (fd, offset >> 32, offset & 0xffffffff, &result, SEEK_SET))
       return -1;
   }
 #else
   {
-    off_t offset = (off_t) sector * (off_t) SECTOR_SIZE;
+    off_t offset = (off_t) sector * (off_t) get_sector_size(drive);
 
     if (lseek (fd, offset, SEEK_SET) != offset)
       return -1;
@@ -1088,13 +1099,13 @@ biosdisk (int subfunc, int drive, struct geometry *geometry,
 	     sectors that are read together with the MBR in one read.  It
 	     should only remap the MBR, so we split the read in two 
 	     parts. -jochen  */
-	  if (nread (fd, buf, SECTOR_SIZE) != SECTOR_SIZE)
+	  if (nread (fd, buf, get_sector_size(drive)) != get_sector_size(drive))
 	    return -1;
-	  buf += SECTOR_SIZE;
+	  buf += get_sector_size(drive);
 	  nsec--;
 	}
 #endif
-      if (nread (fd, buf, nsec * SECTOR_SIZE) != nsec * SECTOR_SIZE)
+      if (nread (fd, buf, nsec * get_sector_size(drive)) != nsec * get_sector_size(drive))
 	return -1;
       break;
 
@@ -1104,10 +1115,10 @@ biosdisk (int subfunc, int drive, struct geometry *geometry,
 	  grub_printf ("Write %d sectors starting from %d sector"
 		       " to drive 0x%x (%s)\n",
 		       nsec, sector, drive, device_map[drive]);
-	  hex_dump (buf, nsec * SECTOR_SIZE);
+	  hex_dump (buf, nsec * get_sector_size(drive));
 	}
       if (! read_only)
-	if (nwrite (fd, buf, nsec * SECTOR_SIZE) != nsec * SECTOR_SIZE)
+	if (nwrite (fd, buf, nsec * get_sector_size(drive)) != nsec * get_sector_size(drive))
 	  return -1;
       break;
 

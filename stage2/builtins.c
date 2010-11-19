@@ -195,11 +195,12 @@ blocklist_read_helper (int sector, int offset, int length)
   int *num_sectors = &blocklist_func_context.num_sectors;
   int *num_entries = &blocklist_func_context.num_entries;
   int *last_length = &blocklist_func_context.last_length;
+  int sector_size = get_sector_size(current_drive);
 
   if (*num_sectors > 0)
   {
     if (*start_sector + *num_sectors == sector
-      && offset == 0 && *last_length == SECTOR_SIZE)
+      && offset == 0 && *last_length == sector_size)
     {
       *num_sectors++;
       *last_length = length;
@@ -207,7 +208,7 @@ blocklist_read_helper (int sector, int offset, int length)
     }
     else
     {
-      if (*last_length == SECTOR_SIZE)
+      if (*last_length == sector_size)
         grub_printf ("%s%d+%d", *num_entries ? "," : "",
           *start_sector - part_start, *num_sectors);
       else if (*num_sectors > 1)
@@ -1512,7 +1513,8 @@ find_func (char *arg, int flags)
       unsigned long part = 0xFFFFFF;
       unsigned long start, len, offset, ext_offset, gpt_offset;
       int type, entry, gpt_count, gpt_size;
-      char buf[SECTOR_SIZE];
+      int sector_size = get_sector_size(drive);
+      char buf[sector_size];
 
       current_drive = drive;
       while (next_partition (drive, 0xFFFFFF, &part, &type,
@@ -3012,7 +3014,6 @@ partnew_func (char *arg, int flags)
   int start_cl, start_ch, start_dh;
   int end_cl, end_ch, end_dh;
   int entry;
-  char mbr[512];
 
   /* Convert a LBA address to a CHS address in the INT 13 format.  */
   auto void lba_to_chs (int lba, int *cl, int *ch, int *dh);
@@ -3042,6 +3043,9 @@ partnew_func (char *arg, int flags)
       errnum = ERR_BAD_ARGUMENT;
       return 1;
     }
+
+  int sector_size = get_sector_size(current_drive);
+  char mbr[sector_size];
 
   /* The partition must a primary partition.  */
   if ((current_partition >> 16) > 3
@@ -3076,7 +3080,7 @@ partnew_func (char *arg, int flags)
     return 1;
 
   /* Read the MBR.  */
-  if (! rawread (current_drive, 0, 0, SECTOR_SIZE, mbr))
+  if (! rawread (current_drive, 0, 0, sector_size, mbr))
     return 1;
 
   /* Check if the new partition will fit in the disk.  */
@@ -3131,7 +3135,6 @@ parttype_func (char *arg, int flags)
   unsigned long part = 0xFFFFFF;
   unsigned long start, len, offset, ext_offset, gpt_offset;
   int entry, type, gpt_count, gpt_size;
-  char mbr[512];
 
   /* Get the drive and the partition.  */
   if (! set_device (arg))
@@ -3143,6 +3146,9 @@ parttype_func (char *arg, int flags)
       errnum = ERR_BAD_ARGUMENT;
       return 1;
     }
+
+  int sector_size = get_sector_size(current_drive);
+  char mbr[sector_size];
   
   /* The partition must be a PC slice.  */
   if ((current_partition >> 16) == 0xFF
@@ -3597,6 +3603,7 @@ savedefault_helper(int new_default)
 #endif
 
 #if !defined(SUPPORT_DISKLESS) && defined(GRUB_UTIL)
+#define SECTOR_SIZE 0x200
 /*
  * Full implementation of new `savedefault' for GRUB shell.
  * XXX This needs fixing for stage2 files which aren't accessible
@@ -3694,6 +3701,7 @@ savedefault_shell(char *arg, int flags)
   fclose (fp);
   return 0;
 }
+#undef SECTOR_SIZE
 #endif
 
 /* savedefault */

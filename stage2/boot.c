@@ -281,7 +281,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
 	setup_sects = LINUX_DEFAULT_SETUP_SECTS;
 
       data_len = setup_sects << 9;
-      text_len = filemax - data_len - SECTOR_SIZE;
+      text_len = filemax - data_len - get_sector_size(current_drive);
 
       linux_data_tmp_addr = (char *) LINUX_BZIMAGE_ADDR + text_len;
       
@@ -395,14 +395,15 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
       
 	  /* It is possible that DATA_LEN + SECTOR_SIZE is greater than
 	     MULTIBOOT_SEARCH, so the data may have been read partially.  */
-	  if (data_len + SECTOR_SIZE <= MULTIBOOT_SEARCH)
+	  if (data_len + get_sector_size(current_drive) <= MULTIBOOT_SEARCH)
 	    grub_memmove (linux_data_tmp_addr, buffer,
-			  data_len + SECTOR_SIZE);
+			  data_len + get_sector_size(current_drive));
 	  else
 	    {
 	      grub_memmove (linux_data_tmp_addr, buffer, MULTIBOOT_SEARCH);
 	      grub_read (linux_data_tmp_addr + MULTIBOOT_SEARCH,
-			 data_len + SECTOR_SIZE - MULTIBOOT_SEARCH);
+			 data_len + get_sector_size(current_drive)
+			 - MULTIBOOT_SEARCH);
 	    }
 	  
 	  if (lh->header != LINUX_MAGIC_SIGNATURE ||
@@ -461,7 +462,7 @@ load_image (char *kernel, char *arg, kernel_t suggested_type,
 	  }
       
 	  /* offset into file */
-	  grub_seek (data_len + SECTOR_SIZE);
+	  grub_seek (data_len + get_sector_size(current_drive));
       
 	  cur_addr = (int) linux_data_tmp_addr + LINUX_SETUP_MOVE_SIZE;
 	  grub_read ((char *) LINUX_BZIMAGE_ADDR, text_len);

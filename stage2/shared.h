@@ -57,15 +57,15 @@ extern void *grub_scratch_mem;
 #define NEW_HEAPSIZE 1500
 
 /* 512-byte scratch area */
-#define SCRATCHADDR  RAW_ADDR (0x77e00)
-#define SCRATCHSEG   RAW_SEG (0x77e0)
+#define SCRATCHADDR  RAW_ADDR (0x77000)
+#define SCRATCHSEG   RAW_SEG (0x7700)
 
 /*
- *  This is the location of the raw device buffer.  It is 31.5K
+ *  This is the location of the raw device buffer.  It is 28K
  *  in size.
  */
 
-#define BUFFERLEN   0x7e00
+#define BUFFERLEN   0x7000
 #define BUFFERADDR  RAW_ADDR (0x70000)
 #define BUFFERSEG   RAW_SEG (0x7000)
 
@@ -169,8 +169,10 @@ extern void *grub_scratch_mem;
  *  General disk stuff
  */
 
+#ifndef PLATFORM_EFI
 #define SECTOR_SIZE		0x200
 #define SECTOR_BITS		9
+#endif /* PLATFORM_EFI */
 #define BIOS_FLAG_FIXED_DISK	0x80
 
 #define BOOTSEC_LOCATION		RAW_ADDR (0x7C00)
@@ -840,6 +842,8 @@ int get_diskinfo (int drive, struct geometry *geometry);
 int biosdisk (int subfunc, int drive, struct geometry *geometry,
 	      int sector, int nsec, int segment);
 void stop_floppy (void);
+int get_sector_size (int drive);
+int get_sector_bits (int drive);
 
 /* Command-line interface functions. */
 #ifndef STAGE1_5

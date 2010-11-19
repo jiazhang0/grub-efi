@@ -469,7 +469,7 @@ xfs_mount (void)
 
 	xfs.bsize = le32 (super.sb_blocksize);
 	xfs.blklog = super.sb_blocklog;
-	xfs.bdlog = xfs.blklog - SECTOR_BITS;
+	xfs.bdlog = xfs.blklog - get_sector_bits(current_drive);
 	xfs.rootino = le64 (super.sb_rootino);
 	xfs.isize = le16 (super.sb_inodesize);
 	xfs.agblocks = le32 (super.sb_agblocks);

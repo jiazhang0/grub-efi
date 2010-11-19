@@ -305,7 +305,7 @@ devread (int sector, int byte_offset, int byte_len, char *buf)
    *  Check partition boundaries
    */
   if (sector < 0
-      || ((sector + ((byte_offset + byte_len - 1) >> SECTOR_BITS))
+      || ((sector + ((byte_offset + byte_len - 1) >> get_sector_bits(current_drive)))
 	  >= part_length))
     {
       errnum = ERR_OUTSIDE_PART;
@@ -315,8 +315,8 @@ devread (int sector, int byte_offset, int byte_len, char *buf)
   /*
    *  Get the read to the beginning of a partition.
    */
-  sector += byte_offset >> SECTOR_BITS;
-  byte_offset &= SECTOR_SIZE - 1;
+  sector += byte_offset >> get_sector_bits(current_drive);
+  byte_offset &= get_sector_size(current_drive) - 1;
 
 #if !defined(STAGE1_5)
   if (disk_read_hook && debug)
@@ -355,7 +355,7 @@ rawwrite (int drive, int sector, char *buf)
 	sector = 1;
     }
   
-  memmove ((char *) SCRATCHADDR, buf, SECTOR_SIZE);
+  memmove ((char *) SCRATCHADDR, buf, get_sector_size(drive));
   if (biosdisk (BIOSDISK_WRITE, drive, &buf_geom,
 		sector, 1, SCRATCHSEG))
     {
@@ -392,7 +392,7 @@ devwrite (int sector, int sector_count, char *buf)
       for (i = 0; i < sector_count; i++)
 	{
 	  if (! rawwrite (current_drive, part_start + sector + i, 
-			  buf + (i << SECTOR_BITS)))
+			  buf + (i << get_sector_bits(current_drive))))
 	      return 0;
 
 	}
@@ -466,7 +466,7 @@ make_saved_active (void)
 	}
 
       /* Read the MBR in the scratch space.  */
-      if (! rawread (saved_drive, 0, 0, SECTOR_SIZE, mbr))
+      if (! rawread (saved_drive, 0, 0, get_sector_size(saved_drive), mbr))
 	return 0;
 
       /* If the partition is an extended partition, setting the active
@@ -619,7 +619,7 @@ next_partition (unsigned long drive, unsigned long dest,
 
 	  /* Read the BSD label.  */
 	  if (! rawread (drive, *start + BSD_LABEL_SECTOR,
-			 0, SECTOR_SIZE, buf))
+			 0, get_sector_size(drive), buf))
 	    return 0;
 
 	  /* Check if it is valid.  */
@@ -674,7 +674,7 @@ next_partition (unsigned long drive, unsigned long dest,
 	}
 
       /* Read the MBR or the boot sector of the extended partition.  */
-      if (! rawread (drive, *offset, 0, SECTOR_SIZE, buf))
+      if (! rawread (drive, *offset, 0, get_sector_size(drive), buf))
 	return 0;
 
       /* Check if it is valid.  */
@@ -690,7 +690,7 @@ next_partition (unsigned long drive, unsigned long dest,
          struct grub_gpt_header *hdr = (struct grub_gpt_header *) buf;
 
          /* Read in the GPT Partition table header.  */
-         if (! rawread (drive, 1, 0, SECTOR_SIZE, buf))
+         if (! rawread (drive, 1, 0, get_sector_size(drive), buf))
            return 0;
 
          if (hdr->magic == GPT_HEADER_MAGIC && hdr->version == 0x10000)
@@ -710,7 +710,7 @@ next_partition (unsigned long drive, unsigned long dest,
              /* This is not a valid header for a GPT partition table.
                 Re-read the MBR or the boot sector of the extended
                 partition.  */
-             if (! rawread (drive, *offset, 0, SECTOR_SIZE, buf))
+             if (! rawread (drive, *offset, 0, get_sector_size(drive), buf))
                return 0;
            }
        }
@@ -785,7 +785,7 @@ next_partition (unsigned long drive, unsigned long dest,
            return 0;
          }
        /* Read in the GPT Partition table entry.  */
-       if (! rawread (drive, (*gpt_offset) + GPT_ENTRY_SECTOR (*gpt_size, *entry), GPT_ENTRY_INDEX (*gpt_size, *entry), *gpt_size, buf))
+       if (! rawread (drive, (*gpt_offset) + GPT_ENTRY_SECTOR (drive, *gpt_size, *entry), GPT_ENTRY_INDEX (drive, *gpt_size, *entry), *gpt_size, buf))
          return 0;
       } while (! (gptentry->type1 && gptentry->type2));
 
@@ -851,7 +851,7 @@ real_open_partition (int flags)
   int gpt_count;
   int gpt_size;
   int entry;
-  char buf[SECTOR_SIZE];
+  char buf[4096];
   int bsd_part, pc_slice;
 
   /* For simplicity.  */
@@ -1021,6 +1021,17 @@ open_partition (void)
 {
   return real_open_partition (0);
 }
+
+#if !defined(PLATFORM_EFI) && !defined(GRUB_UTIL)
+int get_sector_size (int drive)
+{
+  return SECTOR_SIZE;
+}
+int get_sector_bits (int drive)
+{
+  return SECTOR_BITS;
+}
+#endif /* !defined(PLATFORM_EFI) && !defined(GRUB_UTIL) */
 
 
 #ifndef STAGE1_5
@@ -1227,7 +1238,7 @@ set_bootdev (int hdbias)
   if ((saved_drive & 0x80) && cur_part_addr)
     {
       if (rawread (saved_drive, cur_part_offset,
-		   0, SECTOR_SIZE, (char *) SCRATCHADDR))
+		   0, get_sector_size(saved_drive), (char *) SCRATCHADDR))
 	{
 	  char *dst, *src;
       
@@ -1692,7 +1703,7 @@ grub_open (char *filename)
 
 	  BLK_BLKLENGTH (list_addr) = tmp;
 
-	  filemax += (tmp * SECTOR_SIZE);
+	  filemax += (tmp * get_sector_size(current_drive));
 	  list_addr += BLK_BLKLIST_INC_VAL;
 
 	  if (*ptr != ',')
@@ -1769,6 +1780,7 @@ grub_read (char *buf, int len)
   if (block_file)
     {
       int size, off, ret = 0;
+      int sector_size = get_sector_size(current_drive);
 
       while (len && !errnum)
 	{
@@ -1783,10 +1795,10 @@ grub_read (char *buf, int len)
 	  /* run BLK_CUR_FILEPOS up to filepos */
 	  while (filepos > BLK_CUR_FILEPOS)
 	    {
-	      if ((filepos - (BLK_CUR_FILEPOS & ~(SECTOR_SIZE - 1)))
-		  >= SECTOR_SIZE)
+	      if ((filepos - (BLK_CUR_FILEPOS & ~(sector_size - 1)))
+		  >= sector_size)
 		{
-		  BLK_CUR_FILEPOS += SECTOR_SIZE;
+		  BLK_CUR_FILEPOS += sector_size;
 		  BLK_CUR_BLKNUM++;
 
 		  if (BLK_CUR_BLKNUM >= BLK_BLKLENGTH (BLK_CUR_BLKLIST))
@@ -1799,9 +1811,9 @@ grub_read (char *buf, int len)
 		BLK_CUR_FILEPOS = filepos;
 	    }
 
-	  off = filepos & (SECTOR_SIZE - 1);
+	  off = filepos & (sector_size - 1);
 	  size = ((BLK_BLKLENGTH (BLK_CUR_BLKLIST) - BLK_CUR_BLKNUM)
-		  * SECTOR_SIZE) - off;
+		  * sector_size) - off;
 	  if (size > len)
 	    size = len;
 

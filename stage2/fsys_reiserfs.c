@@ -292,7 +292,6 @@ struct reiserfs_de_head
 
 /* The size of the node cache */
 #define FSYSREISER_CACHE_SIZE 24*1024
-#define FSYSREISER_MIN_BLOCKSIZE SECTOR_SIZE
 #define FSYSREISER_MAX_BLOCKSIZE FSYSREISER_CACHE_SIZE / 3
 
 /* Info about currently opened file */
@@ -569,9 +568,11 @@ int
 reiserfs_mount (void)
 {
   struct reiserfs_super_block super;
-  int superblock = REISERFS_DISK_OFFSET_IN_BYTES >> SECTOR_BITS;
+  int sector_bits = get_sector_bits(current_drive);
+  int sector_size = get_sector_size(current_drive);
+  int superblock = REISERFS_DISK_OFFSET_IN_BYTES >> sector_bits;
 
-  if (part_length < superblock + (sizeof (super) >> SECTOR_BITS)
+  if (part_length < superblock + (sizeof (super) >> sector_bits)
       || ! devread (superblock, 0, sizeof (struct reiserfs_super_block), 
 		(char *) &super)
       || (substring (REISER3FS_SUPER_MAGIC_STRING, super.s_magic) > 0
@@ -582,8 +583,8 @@ reiserfs_mount (void)
 	  <= REISERFS_DISK_OFFSET_IN_BYTES))
     {
       /* Try old super block position */
-      superblock = REISERFS_OLD_DISK_OFFSET_IN_BYTES >> SECTOR_BITS;
-      if (part_length < superblock + (sizeof (super) >> SECTOR_BITS)
+      superblock = REISERFS_OLD_DISK_OFFSET_IN_BYTES >> sector_bits;
+      if (part_length < superblock + (sizeof (super) >> sector_bits)
 	  || ! devread (superblock, 0, sizeof (struct reiserfs_super_block), 
 			(char *) &super))
 	return 0;
@@ -610,7 +611,7 @@ reiserfs_mount (void)
   INFO->version = super.s_version;
   INFO->blocksize = super.s_blocksize;
   INFO->fullblocksize_shift = grub_log2 (super.s_blocksize);
-  INFO->blocksize_shift = INFO->fullblocksize_shift - SECTOR_BITS;
+  INFO->blocksize_shift = INFO->fullblocksize_shift - sector_bits;
   INFO->cached_slots = 
     (FSYSREISER_CACHE_SIZE >> INFO->fullblocksize_shift) - 1;
 
@@ -622,9 +623,9 @@ reiserfs_mount (void)
   /* Clear node cache. */
   memset (INFO->blocks, 0, sizeof (INFO->blocks));
 
-  if (super.s_blocksize < FSYSREISER_MIN_BLOCKSIZE
+  if (super.s_blocksize < get_sector_size(current_drive)
       || super.s_blocksize > FSYSREISER_MAX_BLOCKSIZE
-      || (SECTOR_SIZE << INFO->blocksize_shift) != super.s_blocksize)
+      || (sector_size << INFO->blocksize_shift) != super.s_blocksize)
     return 0;
 
   /* Initialize journal code.  If something fails we end with zero
@@ -1215,9 +1216,10 @@ int
 reiserfs_embed (int *start_sector, int needed_sectors)
 {
   struct reiserfs_super_block super;
+  int sector_bits = get_sector_bits(current_drive);
   int num_sectors;
-  
-  if (! devread (REISERFS_DISK_OFFSET_IN_BYTES >> SECTOR_BITS, 0, 
+ 
+  if (! devread (REISERFS_DISK_OFFSET_IN_BYTES >> sector_bits, 0,
 		 sizeof (struct reiserfs_super_block), (char *) &super))
     return 0;
   
@@ -1229,9 +1231,9 @@ reiserfs_embed (int *start_sector, int needed_sectors)
 	   * the journal log */
 	  super.s_journal_block * super.s_blocksize 
 	  > REISERFS_DISK_OFFSET_IN_BYTES))
-    num_sectors = (REISERFS_DISK_OFFSET_IN_BYTES >> SECTOR_BITS) - 1;
+    num_sectors = (REISERFS_DISK_OFFSET_IN_BYTES >> sector_bits) - 1;
   else
-    num_sectors = (REISERFS_OLD_DISK_OFFSET_IN_BYTES >> SECTOR_BITS) - 1;
+    num_sectors = (REISERFS_OLD_DISK_OFFSET_IN_BYTES >> sector_bits) - 1;
   
   return (needed_sectors <= num_sectors);
 }

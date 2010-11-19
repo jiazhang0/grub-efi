@@ -60,9 +60,10 @@ struct grub_gpt_partentry
 
 #define GPT_HEADER_MAGIC       0x5452415020494645ULL
 
-#define        GPT_ENTRY_SECTOR(size,entry)                                    \
-       ((((entry) * (size) + 1) & ~(SECTOR_SIZE - 1)) >> SECTOR_BITS)
-#define        GPT_ENTRY_INDEX(size,entry)                                     \
-       ((((entry) * (size) + 1) & (SECTOR_SIZE - 1)) - 1)
+#define        GPT_ENTRY_SECTOR(drive,size,entry)                      \
+       ((((entry) * (size) + 1) & ~(get_sector_size(drive) - 1))       \
+       >> get_sector_bits(drive))
+#define        GPT_ENTRY_INDEX(drive, size,entry)                      \
+       ((((entry) * (size) + 1) & (get_sector_size(drive) - 1)) - 1)
 
 #endif /* _GPT_H */

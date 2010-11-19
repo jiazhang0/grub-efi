@@ -49,10 +49,10 @@ struct fat_superblock
 /* pointer(s) into filesystem info buffer for DOS stuff */
 #define FAT_SUPER ( (struct fat_superblock *) \
  		    ( FSYS_BUF + 32256) )/* 512 bytes long */
-#define FAT_BUF   ( FSYS_BUF + 30208 )	/* 4 sector FAT buffer */
-#define NAME_BUF  ( FSYS_BUF + 29184 )	/* Filename buffer (833 bytes) */
+#define FAT_BUF   ( FSYS_BUF + 28160 )	/* 4 sector FAT buffer */
+#define NAME_BUF  ( FSYS_BUF + 27136 )	/* Filename buffer (833 bytes) */
 
-#define FAT_CACHE_SIZE 2048
+#define FAT_CACHE_SIZE 4096
 
 static __inline__ unsigned int
 grub_log2 (unsigned int word)
@@ -68,6 +68,7 @@ fat_mount (void)
 {
   struct fat_bpb bpb;
   __u32 magic, first_fat;
+  int sector_size;
   
   /* Check partition type for harddisk */
   if (((current_drive & 0x80) || (current_slice != 0))
@@ -80,6 +81,8 @@ fat_mount (void)
   /* Read bpb */
   if (! devread (0, 0, sizeof (bpb), (char *) &bpb))
     return 0;
+
+  sector_size = get_sector_size(current_drive);
 
   /* Check if the number of sectors per cluster is zero here, to avoid
      zero division.  */
@@ -108,7 +111,7 @@ fat_mount (void)
   FAT_SUPER->data_offset = 
     FAT_SUPER->root_offset
     + ((FAT_SUPER->root_max - 1) >> FAT_SUPER->sectsize_bits) + 1;
-  FAT_SUPER->num_clust = 
+  FAT_SUPER->num_clust =
     2 + ((FAT_SUPER->num_sectors - FAT_SUPER->data_offset) 
 	 / bpb.sects_per_clust);
   FAT_SUPER->sects_per_clust = bpb.sects_per_clust;
@@ -155,11 +158,11 @@ fat_mount (void)
   /* Now do some sanity checks */
   
   if (FAT_CVT_U16(bpb.bytes_per_sect) != (1 << FAT_SUPER->sectsize_bits)
-      || FAT_CVT_U16(bpb.bytes_per_sect) != SECTOR_SIZE
+      || FAT_CVT_U16(bpb.bytes_per_sect) != sector_size
       || bpb.sects_per_clust != (1 << (FAT_SUPER->clustsize_bits
  				       - FAT_SUPER->sectsize_bits))
       || FAT_SUPER->num_clust <= 2
-      || (FAT_SUPER->fat_size * FAT_SUPER->num_clust / (2 * SECTOR_SIZE)
+      || (FAT_SUPER->fat_size * FAT_SUPER->num_clust / (2 * sector_size)
  	  > FAT_SUPER->fat_length))
     return 0;
   
@@ -203,6 +206,7 @@ fat_read (char *buf, int len)
   int offset;
   int ret = 0;
   int size;
+  int sector_size = get_sector_size(current_drive);
   
   if (FAT_SUPER->file_cluster < 0)
     {
@@ -238,10 +242,10 @@ fat_read (char *buf, int len)
 	  if (cached_pos < 0 || 
 	      (cached_pos + FAT_SUPER->fat_size) > 2*FAT_CACHE_SIZE)
 	    {
-	      FAT_SUPER->cached_fat = (fat_entry & ~(2*SECTOR_SIZE - 1));
+	      FAT_SUPER->cached_fat = (fat_entry & ~(2*sector_size - 1));
 	      cached_pos = (fat_entry - FAT_SUPER->cached_fat);
 	      sector = FAT_SUPER->fat_offset
-		+ FAT_SUPER->cached_fat / (2*SECTOR_SIZE);
+		+ FAT_SUPER->cached_fat / (2*sector_size);
 	      if (!devread (sector, 0, FAT_CACHE_SIZE, (char*) FAT_BUF))
 		return 0;
 	    }
@@ -259,6 +263,8 @@ fat_read (char *buf, int len)
 	    return ret;
 	  if (next_cluster < 2 || next_cluster >= FAT_SUPER->num_clust)
 	    {
+	      grub_printf("next_cluster: %d FAT_SUPER->num_clust: %d\n",
+		next_cluster, FAT_SUPER->num_clust);
 	      errnum = ERR_FSYS_CORRUPT;
 	      return 0;
 	    }

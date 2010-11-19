@@ -37,6 +37,13 @@
 
 #define PTR_HI(x) ((grub_uint32_t) ((unsigned long long)((unsigned long)(x)) >> 32))
 
+#ifndef SECTOR_SIZE
+#define SECTOR_SIZE 0x200
+#endif /* defined(SECTOR_SIZE) */
+#ifndef SECTOR_BITS
+#define SECTOR_BITS 9
+#endif /* defined(SECTOR_BITS) */
+
 static unsigned long linux_mem_size;
 static int loaded;
 static void *real_mode_mem;
