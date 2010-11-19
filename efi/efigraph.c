@@ -576,7 +576,7 @@ get_screen_size(struct graphics_backend *backend, position_t *size)
     size->y = info->vertical_resolution;
 }
 
-static void 
+static void
 bltbuf_set_pixel(struct bltbuf *bltbuf, position_t *pos,
                              grub_efi_graphics_output_pixel_t *pixel)
 {
@@ -1023,10 +1023,10 @@ clbl(struct graphics_backend *backend, int col, int row, int width, int height,
     width = MIN(width, screensz.x - col);
     height = MIN(height, screensz.y - row);
     graphics_get_font_size(&fontsz);
- 
+
     blsz.x = width * fontsz.x;
     blsz.y = height * fontsz.y;
-   
+
     bltbuf = alloc_bltbuf(blsz.x, blsz.y);
     if (!bltbuf)
         return;
@@ -1085,10 +1085,10 @@ set_video_mode(struct eg *eg, int mode)
 static void disable(struct graphics_backend *backend)
 {
     struct eg *eg;
-    
+
     if (!backend)
         return;
-    
+
     eg = backend->priv;
     if (!eg || eg->current_mode != GRAPHICS)
         return;
@@ -1263,7 +1263,7 @@ static void
 sort_modes(struct eg *eg, int p, int r)
 {
 	struct video_mode **modes = eg->modes;
-        
+
         int i, j;
 	for (i = 0; i < eg->max_mode; i++) {
 		for (j = i + 1; j < eg->max_mode; j++) {
@@ -1325,7 +1325,7 @@ try_enable(struct graphics_backend *backend)
 #endif
 
             grub_efi_set_text_mode(0);
-            efi_status = set_video_mode(eg, eg->modes[i]->number);	    
+            efi_status = set_video_mode(eg, eg->modes[i]->number);
             if (efi_status == GRUB_EFI_SUCCESS) {
 #if 0
                 grub_efi_set_text_mode(1);
@@ -1422,7 +1422,7 @@ enable(struct graphics_backend *backend)
         reset_screen_geometry(backend);
         return 1;
     }
-    
+
 fail:
     backend->priv = NULL;
     if (eg->modes) {
