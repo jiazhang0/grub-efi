@@ -1,20 +1,20 @@
 
-all : switch2.h
+all : switch.h
 
 bin_to_h: bin_to_h.c
 	$(CC) $(CFLAGS) -o $@ $<
 
-switch2.h : switch2.bin bin_to_h
+switch.h : switch.bin bin_to_h
 	./bin_to_h < $< > $@
 
-switch2.bin : switch2
+switch.bin : switch
 	objcopy -O binary $< $@
 
-switch2 : switch2.o
+switch : switch.o
 	ld.bfd -Ttext-segment=0x688 --init _start -o $@ $<
 
-switch2.o : switch.S
+switch.o : switch.S
 	as -march=generic64 -defsym _start=0 -o $@ $<
 
 clean :
-	@rm -vf switch2.o switch2 switch2.bin switch2.h bin_to_h
+	@rm -vf switch.o switch switch.bin switch.h bin_to_h
