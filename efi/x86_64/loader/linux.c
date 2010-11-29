@@ -159,7 +159,8 @@ allocate_pages (grub_size_t real_size, grub_size_t prot_size)
 
   if (!prot_mode_mem)
 	grub_fatal("Cannot allocate pages for VMLINUZ");
-    
+  grub_printf("Got pages at %p\n", prot_mode_mem);
+ 
   return 1;
 
  fail:
