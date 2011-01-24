@@ -31,8 +31,8 @@ pkgdatadir=${datadir}/${PACKAGE}/${host_cpu}-${host_vendor}
 
 grub_shell=${sbindir}/grub
 mdadm=${sbindir}/mdadm
-log_file=/tmp/grub-install.log.$$
-img_file=/tmp/grub-install.img.$$
+log_file=${TMPDIR:-/tmp}/grub-install.log.$$
+img_file=${TMPDIR:-/tmp}/grub-install.img.$$
 rootdir=
 grub_prefix=/boot/grub
 
@@ -49,8 +49,8 @@ if test -x /bin/tempfile; then
     mklog="/bin/tempfile --prefix=grub"
     mkimg="/bin/tempfile --prefix=grub"
 elif test -x /bin/mktemp; then
-    mklog="/bin/mktemp /tmp/grub-install.log.XXXXXX"
-    mkimg="/bin/mktemp /tmp/grub-install.img.XXXXXX"
+    mklog="/bin/mktemp ${TMPDIR:-/tmp}/grub-install.log.XXXXXX"
+    mkimg="/bin/mktemp ${TMPDIR:-/tmp}/grub-install.img.XXXXXX"
 else
     mklog=""
     mkimg=""
