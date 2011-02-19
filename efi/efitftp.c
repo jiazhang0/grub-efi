@@ -3,6 +3,8 @@
 #include <grub/efi/misc.h>
 #include <grub/misc.h>
 
+#include </usr/include/efi/x86_64/efibind.h>
+
 #include <shared.h>
 #include <filesys.h>
 #include "pxe.h"

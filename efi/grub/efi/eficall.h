@@ -65,83 +65,18 @@ EFI_STATUS x64_call10(unsigned long func, unsigned long a,
 		      unsigned long h, unsigned long i,
 		      unsigned long j);
 
-#define Call_Service(func)                      x64_call0((unsigned long)func)
 
-#define Call_Service_1(func,a)                  x64_call1((unsigned long)func, \
-							  (unsigned long)a)
-
-#define Call_Service_2(func,a,b)                x64_call2((unsigned long)func, \
-							  (unsigned long)a,    \
-							  (unsigned long)b)
-
-#define Call_Service_3(func,a,b,c)              x64_call3((unsigned long)func, \
-							  (unsigned long)a,    \
-							  (unsigned long)b,    \
-							  (unsigned long)c)
-
-#define Call_Service_4(func,a,b,c,d)            x64_call4((unsigned long)func, \
-							  (unsigned long)a,    \
-							  (unsigned long)b,    \
-							  (unsigned long)c,    \
-							  (unsigned long)d)
-
-#define Call_Service_5(func,a,b,c,d,e)          x64_call5((unsigned long)func, \
-							  (unsigned long)a,    \
-							  (unsigned long)b,    \
-							  (unsigned long)c,    \
-							  (unsigned long)d,    \
-							  (unsigned long)e)
-
-#define Call_Service_6(func,a,b,c,d,e,f)        x64_call6((unsigned long)func, \
-							  (unsigned long)a,    \
-							  (unsigned long)b,    \
-							  (unsigned long)c,    \
-							  (unsigned long)d,    \
-							  (unsigned long)e,    \
-							  (unsigned long)f)
-
-#define Call_Service_7(func,a,b,c,d,e,f,g)      x64_call7((unsigned long)func, \
-							  (unsigned long)a,    \
-							  (unsigned long)b,    \
-							  (unsigned long)c,    \
-							  (unsigned long)d,    \
-							  (unsigned long)e,    \
-							  (unsigned long)f,    \
-							  (unsigned long)g)
-
-#define Call_Service_8(func,a,b,c,d,e,f,g,h)    x64_call8((unsigned long)func, \
-							  (unsigned long)a,    \
-							  (unsigned long)b,    \
-							  (unsigned long)c,    \
-							  (unsigned long)d,    \
-							  (unsigned long)e,    \
-							  (unsigned long)f,    \
-							  (unsigned long)g,    \
-							  (unsigned long)h)
-
-#define Call_Service_9(func,a,b,c,d,e,f,g,h,i)  x64_call9((unsigned long)func, \
-							  (unsigned long)a,    \
-							  (unsigned long)b,    \
-							  (unsigned long)c,    \
-							  (unsigned long)d,    \
-							  (unsigned long)e,    \
-							  (unsigned long)f,    \
-							  (unsigned long)g,    \
-							  (unsigned long)h,    \
-							  (unsigned long)i)
-
-#define Call_Service_10(func,a,b,c,d,e,f,g,h,i,j) \
-					       x64_call10((unsigned long)func, \
-							  (unsigned long)a,    \
-							  (unsigned long)b,    \
-							  (unsigned long)c,    \
-							  (unsigned long)d,    \
-							  (unsigned long)e,    \
-							  (unsigned long)f,    \
-							  (unsigned long)g,    \
-							  (unsigned long)h,    \
-							  (unsigned long)i,    \
-							  (unsigned long)j)
+#define Call_Service(func)			uefi_call_wrapper(func,0)
+#define Call_Service_1(func,a)			uefi_call_wrapper(func,1,a)
+#define Call_Service_2(func,a,b)		uefi_call_wrapper(func,2,a,b)
+#define Call_Service_3(func,a,b,c)		uefi_call_wrapper(func,3,a,b,c)
+#define Call_Service_4(func,a,b,c,d)		uefi_call_wrapper(func,4,a,b,c,d)
+#define Call_Service_5(func,a,b,c,d,e)		uefi_call_wrapper(func,5,a,b,c,d,e)
+#define Call_Service_6(func,a,b,c,d,e,f)	uefi_call_wrapper(func,6,a,b,c,d,e,f)
+#define Call_Service_7(func,a,b,c,d,e,f,g)	uefi_call_wrapper(func,7,a,b,c,d,e,f,g)
+#define Call_Service_8(func,a,b,c,d,e,f,g,h)	uefi_call_wrapper(func,8,a,b,c,d,e,f,g,h)
+#define Call_Service_9(func,a,b,c,d,e,f,g,h,i)	uefi_call_wrapper(func,9,a,b,c,d,e,f,g,h,i)
+#define Call_Service_10(func,a,b,c,d,e,f,g,h,i,j)	uefi_call_wrapper(func,9,a,b,c,d,e,f,g,h,i,j)
 
 #else
 
