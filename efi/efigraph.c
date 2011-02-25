@@ -1312,6 +1312,8 @@ try_enable(struct graphics_backend *backend)
 	dbgdelay(__FILE__, __LINE__);
 #endif
 
+	efi_status = GRUB_EFI_UNSUPPORTED;
+
         for (i = eg->max_mode - 1; i >= 0; i--) {
             if (!eg->modes[i])
                 continue;
