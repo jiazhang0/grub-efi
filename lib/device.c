@@ -1119,6 +1119,10 @@ write_to_partition (char **map, int drive, int partition,
   fd = open (dev, O_RDWR);
   if (fd < 0)
     {
+      /* No partition file, pass thru and not worry about
+       * cache inconsistency. */
+      if (errno == ENOENT)
+        return -1;
       errnum = ERR_NO_PART;
       return 0;
     }

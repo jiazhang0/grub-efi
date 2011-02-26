@@ -381,23 +381,23 @@ devwrite (int sector, int sector_count, char *buf)
 	 embed a Stage 1.5 into a partition instead of a MBR, use system
 	 calls directly instead of biosdisk, because of the bug in
 	 Linux. *sigh*  */
-      return write_to_partition (device_map, current_drive, current_partition,
-				 sector, sector_count, buf);
+      int ret;
+      ret = write_to_partition (device_map, current_drive, current_partition,
+				sector, sector_count, buf);
+      if (ret != -1)
+	return ret;
     }
-  else
 #endif /* GRUB_UTIL && __linux__ */
-    {
-      int i;
-      
-      for (i = 0; i < sector_count; i++)
-	{
-	  if (! rawwrite (current_drive, part_start + sector + i, 
-			  buf + (i << get_sector_bits(current_drive))))
-	      return 0;
+    int i;
 
-	}
-      return 1;
-    }
+    for (i = 0; i < sector_count; i++)
+      {
+	if (! rawwrite (current_drive, part_start + sector + i,
+			buf + (i << get_sector_bits(current_drive))))
+	    return 0;
+
+      }
+    return 1;
 }
 
 static int
