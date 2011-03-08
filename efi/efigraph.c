@@ -34,6 +34,8 @@
 #include <shared.h>
 #include <graphics.h>
 
+#include </usr/include/efi/x86_64/efibind.h>
+
 #include "graphics.h"
 #include "xpm.h"
 
