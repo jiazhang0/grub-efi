@@ -215,8 +215,9 @@ extern void *grub_scratch_mem;
 #define STAGE2_ID_VSTAFS_STAGE1_5	6
 #define STAGE2_ID_JFS_STAGE1_5		7
 #define STAGE2_ID_XFS_STAGE1_5		8
-#define STAGE2_ID_ISO9660_STAGE1_5	9
-#define STAGE2_ID_UFS2_STAGE1_5		10
+#define STAGE2_ID_BTRFS_STAGE1_5	9
+#define STAGE2_ID_ISO9660_STAGE1_5	10
+#define STAGE2_ID_UFS2_STAGE1_5		11
 
 #ifndef STAGE1_5
 # define STAGE2_ID	STAGE2_ID_STAGE2
@@ -237,6 +238,8 @@ extern void *grub_scratch_mem;
 #  define STAGE2_ID	STAGE2_ID_JFS_STAGE1_5
 # elif defined(FSYS_XFS)
 #  define STAGE2_ID	STAGE2_ID_XFS_STAGE1_5
+# elif defined(FSYS_BTRFS)
+#  define STAGE2_ID	STAGE2_ID_BTRFS_STAGE1_5
 # elif defined(FSYS_ISO9660)
 #  define STAGE2_ID	STAGE2_ID_ISO9660_STAGE1_5
 # elif defined(FSYS_UFS2)

@@ -41,6 +41,8 @@ Kristoffer Branemyr added VSTa filesystem support.
 
 Serguei Tzukanov added JFS and XFS support.
 
+Edward Shishkin added Btrfs support.
+
 Jason Thomas added Linux DAC960 support and support for hiding/unhiding
 logical partitions, and did a significant bugfix for the terminal stuff.
 
