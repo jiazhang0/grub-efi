@@ -47,7 +47,7 @@ grub.efi: grub.so
                    -j .rela -j .reloc --target=$(GRUBEFI_FORMAT) $^ $@
 
 grub.so: $(GRUBSO_OBJS) $(GRUBSO_LIBS) @LIBGNUEFI@
-	$(LD) -o $@ $(GRUBSO_LD_FLAGS) $^ @LIBGNUEFI@
+	$(LD) -o $@ $(GRUBSO_LD_FLAGS) $^ @LIBEFI@
 	echo '-------------- unresolved symbols ---------------------'
 	! nm $@ | grep -iw u
 	echo '-------------------------------------------------------'

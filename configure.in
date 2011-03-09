@@ -78,6 +78,8 @@ GNUEFI_LDS=${gnuefi_lds}
 AC_SUBST(GNUEFI_LDS)
 LIBGNUEFI=${libdir}/libgnuefi.a
 AC_SUBST(LIBGNUEFI)
+LIBEFI=${libdir}/libefi.a
+AC_SUBST(LIBEFI)
 
 AC_SUBST(platform)
 AM_CONDITIONAL(PLATFORM_EFI, test "x$platform" = xefi)
