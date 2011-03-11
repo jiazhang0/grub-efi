@@ -1277,7 +1277,7 @@ static int
 try_enable(struct graphics_backend *backend)
 {
     struct eg *eg = backend->priv;
-    grub_efi_status_t efi_status;
+    grub_efi_status_t efi_status = GRUB_EFI_UNSUPPORTED;
     int i;
 
     if (eg->text_mode == 0xffffffff) {
