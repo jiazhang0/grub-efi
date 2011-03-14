@@ -34,6 +34,12 @@
 #include <shared.h>
 #include <graphics.h>
 
+#ifdef __x86_64__
+#include </usr/include/efi/x86_64/efibind.h>
+#else
+#include </usr/include/efi/ia32/efibind.h>
+#endif
+
 #include "graphics.h"
 #include "xpm.h"
 
