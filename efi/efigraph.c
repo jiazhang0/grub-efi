@@ -1405,6 +1405,14 @@ enable(struct graphics_backend *backend)
             efi_status = Call_Service_4(eg->output_intf->query_mode,
                     eg->output_intf, i, &eg->modes[i]->size,
                     &eg->modes[i]->info);
+	    if (efi_status == GRUB_EFI_NOT_STARTED) {
+		/* The firmware didn't turn on GRAPHICS_OUTPUT_PROTOCOL, so
+		 * try to do so ourselves. Thanks, Intel. */
+		set_video_mode(eg, eg->output_intf->mode->mode);
+            	efi_status = Call_Service_4(eg->output_intf->query_mode,
+                    eg->output_intf, i, &eg->modes[i]->size,
+                    &eg->modes[i]->info);
+	    }
             if (efi_status != GRUB_EFI_SUCCESS) {
                 grub_free(eg->modes[i]);
                 eg->modes[i] = NULL;
