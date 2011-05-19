@@ -23,8 +23,6 @@
 #include <grub/efi/api.h>
 #include <grub/efi/misc.h>
 
-#include </usr/include/efi/x86_64/efibind.h>
-
 #include <shared.h>
 #include <term.h>
 

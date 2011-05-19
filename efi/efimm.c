@@ -24,8 +24,6 @@
 #include <grub/efi/efi.h>
 #include <grub/efi/misc.h>
 
-#include </usr/include/efi/x86_64/efibind.h>
-
 #include <shared.h>
 
 #define NEXT_MEMORY_DESCRIPTOR(desc, size)	\

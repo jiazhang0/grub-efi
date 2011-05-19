@@ -26,8 +26,6 @@
 #include <grub/efi/console_control.h>
 #include <grub/efi/time.h>
 
-#include </usr/include/efi/x86_64/efibind.h>
-
 #include <shared.h>
 
 /* The handle of GRUB itself. Filled in by the startup code.  */

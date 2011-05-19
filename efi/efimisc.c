@@ -24,8 +24,6 @@
 #include <grub/efi/misc.h>
 #include <grub/misc.h>
 
-#include </usr/include/efi/x86_64/efibind.h>
-
 #include <shared.h>
 
 unsigned long install_partition = 0x20000;

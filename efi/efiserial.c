@@ -29,8 +29,6 @@
 #include <serial.h>
 #include <term.h>
 
-#include </usr/include/efi/x86_64/efibind.h>
-
 struct grub_efiserial_data
 {
   grub_efi_handle_t handle;
