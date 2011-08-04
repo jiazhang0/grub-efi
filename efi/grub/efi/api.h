@@ -70,6 +70,16 @@
 
 #define GRUB_EFI_OPTIONAL_PTR	0x00000001
 
+#define GRUB_EFI_PCI_IO_GUID	\
+  { 0x4cf5b200, 0x68b8, 0x4ca5, \
+    { 0x9e, 0xec, 0xb2, 0x3e, 0x3f, 0x50, 0x02, 0x9a } \
+  }
+
+#define GRUB_EFI_PCI_ROOT_IO_GUID \
+  { 0x2F707EBB, 0x4A1A, 0x11d4, \
+      { 0x9A, 0x38, 0x00, 0x90,	0x27, 0x3F, 0xC1, 0x4D } \
+  }
+
 #define GRUB_EFI_LOADED_IMAGE_GUID	\
   { 0x5b1b31a1, 0x9562, 0x11d2, \
     { 0x8e, 0x3f, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b } \
@@ -1238,6 +1248,241 @@ typedef enum {
   EfiUgaVideoToVideo,
   EfiUgaBltMax
 } grub_efi_uga_blt_operation_t;
+
+typedef enum {
+  grub_efi_pci_io_width_uint8,
+  grub_efi_pci_io_width_uint16,
+  grub_efi_pci_io_width_uint32,
+  grub_efi_pci_io_width_uint64,
+  grub_efi_pci_io_width_fifo_uint8,
+  grub_efi_pci_io_width_fifo_uint16,
+  grub_efi_pci_io_width_fifo_uint32,
+  grub_efi_pci_io_width_fifo_uint64,
+  grub_efi_pci_io_width_fill_uint8,
+  grub_efi_pci_io_width_fill_uint16,
+  grub_efi_pci_io_width_fill_uint32,
+  grub_efi_pci_io_width_fill_uint64,
+  grub_efi_pci_io_width_maximum
+} grub_efi_pci_io_width;
+
+struct grub_efi_pci_io;
+
+typedef struct
+{
+  grub_efi_status_t(*read) (struct grub_efi_pci_io *this,
+			    grub_efi_pci_io_width width,
+			    grub_efi_uint8_t bar_index,
+			    grub_efi_uint64_t offset,
+			    grub_efi_uintn_t count,
+			    void *buffer);
+  grub_efi_status_t(*write) (struct grub_efi_pci_io *this,
+			    grub_efi_pci_io_width width,
+			    grub_efi_uint8_t bar_index,
+			    grub_efi_uint64_t offset,
+			    grub_efi_uintn_t count,
+			    void *buffer);
+} grub_efi_pci_io_access_t;
+
+typedef struct
+{
+  grub_efi_status_t( *read) (struct grub_efi_pci_io *this,
+			     grub_efi_pci_io_width width,
+			     grub_efi_uint32_t offset,
+			     grub_efi_uintn_t count,
+			     void *buffer);
+  grub_efi_status_t( *write) (struct grub_efi_pci_io *this,
+			     grub_efi_pci_io_width width,
+			     grub_efi_uint32_t offset,
+			     grub_efi_uintn_t count,
+			     void *buffer);
+} grub_efi_pci_io_config_access_t;
+
+typedef enum {
+  grub_efi_pci_io_operation_bus_masterread,
+  grub_efi_pci_io_operation_bus_masterwrite,
+  grub_efi_pci_io_operation_bus_master_common_buffer,
+  grub_efi_pci_io_operation_maximum
+} grub_efi_pci_io_operation_t;
+
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_ISA_IO               0x0002
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_VGA_PALETTE_IO       0x0004
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_VGA_MEMORY           0x0008
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_VGA_IO               0x0010
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_IDE_PRIMARY_IO       0x0020
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_IDE_SECONDARY_IO     0x0040
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_MEMORY_WRITE_COMBINE 0x0080
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_IO                   0x0100
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_MEMORY               0x0200
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_BUS_MASTER           0x0400
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_MEMORY_CACHED        0x0800
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_MEMORY_DISABLE       0x1000
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_EMBEDDED_DEVICE      0x2000
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_EMBEDDED_ROM         0x4000
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_DUAL_ADDRESS_CYCLE   0x8000
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_ISA_IO_16            0x10000
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_VGA_PALETTE_IO_16    0x20000
+#define GRUB_EFI_PCI_IO_ATTRIBUTE_VGA_IO_16            0x40000
+
+typedef enum {
+  grub_efi_pci_io_attribute_operation_get,
+  grub_efi_pci_io_attribute_operation_set,
+  grub_efi_pci_io_attribute_operation_enable,
+  grub_efi_pci_io_attribute_operation_disable,
+  grub_efi_pci_io_attribute_operation_supported,
+  grub_efi_pci_io_attribute_operation_maximum
+} grub_efi_pci_io_attribute_operation_t;
+
+struct grub_efi_pci_io {
+  grub_efi_status_t (*poll_mem) (struct grub_efi_pci_io *this,
+				 grub_efi_pci_io_width  width,
+				 grub_efi_uint8_t bar_ndex,
+				 grub_efi_uint64_t offset,
+				 grub_efi_uint64_t mask,
+				 grub_efi_uint64_t value,
+				 grub_efi_uint64_t delay,
+				 grub_efi_uint64_t *result);
+  grub_efi_status_t (*poll_io) (struct grub_efi_pci_io *this,
+				grub_efi_pci_io_width  Width,
+				grub_efi_uint8_t bar_index,
+				grub_efi_uint64_t offset,
+				grub_efi_uint64_t mask,
+				grub_efi_uint64_t value,
+				grub_efi_uint64_t delay,
+				grub_efi_uint64_t *result);
+  grub_efi_pci_io_access_t mem;
+  grub_efi_pci_io_access_t io;
+  grub_efi_pci_io_config_access_t pci;
+  grub_efi_status_t (*copy_mem) (struct grub_efi_pci_io *this,
+				 grub_efi_pci_io_width width,
+				 grub_efi_uint8_t dest_bar_index,
+				 grub_efi_uint64_t dest_offset,
+				 grub_efi_uint8_t src_bar_index,
+				 grub_efi_uint64_t src_offset,
+				 grub_efi_uintn_t count);
+  grub_efi_status_t (*map) ( struct grub_efi_pci_io *this,
+			     grub_efi_pci_io_operation_t operation,
+			     void *host_address,
+			     grub_efi_uintn_t *number_of_bytes,
+			     grub_efi_uint64_t *device_address,
+			     void **mapping);
+  grub_efi_status_t (*unmap) (struct grub_efi_pci_io *this,
+			      void *mapping);
+  grub_efi_status_t (*allocate_buffer) (struct grub_efi_pci_io *this,
+					grub_efi_allocate_type_t type,
+					grub_efi_memory_type_t memory_type,
+					grub_efi_uintn_t pages,
+					void **host_address,
+					grub_efi_uint64_t attributes);
+  grub_efi_status_t (*free_buffer) (struct grub_efi_pci_io *this,
+					grub_efi_allocate_type_t type,
+					grub_efi_memory_type_t memory_type,
+					grub_efi_uintn_t pages,
+					void **host_address,
+					grub_efi_uint64_t attributes);
+  grub_efi_status_t (*flush) (struct grub_efi_pci_io *this);
+  grub_efi_status_t (*get_location) (struct grub_efi_pci_io *this,
+				     grub_efi_uintn_t *segment_number,
+				     grub_efi_uintn_t *bus_number,
+				     grub_efi_uintn_t *device_number,
+				     grub_efi_uintn_t *function_number);
+  grub_efi_status_t (*attributes) (struct grub_efi_pci_io *this,
+				   grub_efi_pci_io_attribute_operation_t operation,
+				   grub_efi_uint64_t attributes,
+				   grub_efi_uint64_t *result);
+  grub_efi_status_t (*get_bar_attributes) (struct grub_efi_pci_io *this,
+					   grub_efi_uint8_t bar_index,
+					   grub_efi_uint64_t *supports,
+					   void **resources);
+  grub_efi_status_t (*set_bar_attributes) (struct grub_efi_pci_io *this,
+					   grub_efi_uint64_t attributes,
+					   grub_efi_uint8_t bar_index,
+					   grub_efi_uint64_t *offset,
+					   grub_efi_uint64_t *length);
+  grub_efi_uint64_t rom_size;
+  void *rom_image;
+};
+typedef struct grub_efi_pci_io grub_efi_pci_io_t;
+
+struct grub_efi_pci_root_io;
+
+typedef struct
+{
+  grub_efi_status_t(*read) (struct grub_efi_pci_root_io *this,
+			    grub_efi_pci_io_width width,
+			    grub_efi_uint64_t address,
+			    grub_efi_uintn_t count,
+			    void *buffer);
+  grub_efi_status_t(*write) (struct grub_efi_pci_root_io *this,
+			    grub_efi_pci_io_width width,
+			    grub_efi_uint64_t address,
+			    grub_efi_uintn_t count,
+			    void *buffer);
+} grub_efi_pci_root_io_access_t;
+
+typedef enum {
+  grub_efi_pci_root_io_operation_bus_master_read,
+  grub_efi_pci_root_io_operation_bus_master_write,
+  grub_efi_pci_root_io_operation_bus_master_common_buffer,
+  grub_efi_pci_root_io_operation_bus_master_read_64,
+  grub_efi_pci_root_io_operation_bus_master_write_64,
+  grub_efi_pci_root_io_operation_bus_master_common_buffer_64,
+  grub_efi_pci_root_io_operation_maximum
+} grub_efi_pci_root_io_operation_t;
+
+struct grub_efi_pci_root_io {
+  grub_efi_handle_t parent;
+  grub_efi_status_t (*poll_mem) (struct grub_efi_pci_root_io *this,
+				 grub_efi_pci_io_width  width,
+				 grub_efi_uint64_t address,
+				 grub_efi_uint64_t mask,
+				 grub_efi_uint64_t value,
+				 grub_efi_uint64_t delay,
+				 grub_efi_uint64_t *result);
+  grub_efi_status_t (*poll_io) (struct grub_efi_pci_root_io *this,
+				grub_efi_pci_io_width  Width,
+				grub_efi_uint64_t address,
+				grub_efi_uint64_t mask,
+				grub_efi_uint64_t value,
+				grub_efi_uint64_t delay,
+				grub_efi_uint64_t *result);
+  grub_efi_pci_root_io_access_t mem;
+  grub_efi_pci_root_io_access_t io;
+  grub_efi_pci_root_io_access_t pci;
+  grub_efi_status_t (*copy_mem) (struct grub_efi_pci_root_io *this,
+				 grub_efi_pci_io_width width,
+				 grub_efi_uint64_t dest_offset,
+				 grub_efi_uint64_t src_offset,
+				 grub_efi_uintn_t count);
+  grub_efi_status_t (*map) ( struct grub_efi_pci_root_io *this,
+			     grub_efi_pci_root_io_operation_t operation,
+			     void *host_address,
+			     grub_efi_uintn_t *number_of_bytes,
+			     grub_efi_uint64_t *device_address,
+			     void **mapping);
+  grub_efi_status_t (*unmap) (struct grub_efi_pci_root_io *this,
+			      void *mapping);
+  grub_efi_status_t (*allocate_buffer) (struct grub_efi_pci_root_io *this,
+					grub_efi_allocate_type_t type,
+					grub_efi_memory_type_t memory_type,
+					grub_efi_uintn_t pages,
+					void **host_address,
+					grub_efi_uint64_t attributes);
+  grub_efi_status_t (*free_buffer) (struct grub_efi_pci_root_io *this,
+				    grub_efi_uintn_t pages,
+				    void **host_address);
+  grub_efi_status_t (*flush) (struct grub_efi_pci_root_io *this);
+  grub_efi_status_t (*get_attributes) (struct grub_efi_pci_root_io *this,
+				       grub_efi_uint64_t *supports,
+				       void **resources);
+  grub_efi_status_t (*set_attributes) (struct grub_efi_pci_root_io *this,
+				       grub_efi_uint64_t attributes,
+				       grub_efi_uint64_t *offset,
+				       grub_efi_uint64_t *length);
+  grub_efi_status_t (*configuration) (struct grub_efi_pci_root_io *this,
+				      void **resources);
+};
+
+typedef struct grub_efi_pci_root_io grub_efi_pci_root_io_t;
 
 struct grub_efi_uga_draw
 {
