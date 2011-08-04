@@ -120,9 +120,10 @@ grub_efi_allocate_anypages(grub_efi_uintn_t pages)
 }
 
 /* Allocate pages. Return the pointer to the first of allocated pages.  */
-void *
-grub_efi_allocate_pages (grub_efi_physical_address_t address,
-			 grub_efi_uintn_t pages)
+static void *
+grub_efi_allocate_pages_real (grub_efi_physical_address_t address,
+			      grub_efi_uintn_t pages,
+			      grub_efi_memory_type_t memtype)
 {
   grub_efi_allocate_type_t type;
   grub_efi_status_t status;
@@ -143,9 +144,18 @@ grub_efi_allocate_pages (grub_efi_physical_address_t address,
 
   b = grub_efi_system_table->boot_services;
   status = Call_Service_4 (b->allocate_pages, type,
-			   GRUB_EFI_LOADER_DATA, pages, &address);
+			   memtype, pages, &address);
+
   if (status != GRUB_EFI_SUCCESS)
-    return 0;
+    {
+      /* EFI_NOT_FOUND means the region was unavailable, which means we can
+	 probably just use it. This is only for hacks to start with */
+      if (memtype == GRUB_EFI_RUNTIME_SERVICES_DATA &&
+	  status == GRUB_EFI_NOT_FOUND)
+	return (void *) ((grub_addr_t) address);
+      else
+	return 0;
+    }
 
   if (address == 0)
     {
@@ -159,7 +169,8 @@ grub_efi_allocate_pages (grub_efi_physical_address_t address,
 	return 0;
     }
 
-  if (allocated_pages)
+  /* We don't want to free anything we've allocated for runtime */
+  if (allocated_pages && memtype != GRUB_EFI_RUNTIME_SERVICES_DATA)
     {
       unsigned i;
 
@@ -181,6 +192,22 @@ grub_efi_allocate_pages (grub_efi_physical_address_t address,
   return (void *) ((grub_addr_t) address);
 }
 
+void *
+grub_efi_allocate_pages (grub_efi_physical_address_t address,
+			 grub_efi_uintn_t pages)
+
+{
+  return grub_efi_allocate_pages_real(address, pages, GRUB_EFI_LOADER_DATA);
+}
+
+void *
+grub_efi_allocate_runtime_pages (grub_efi_physical_address_t address,
+				 grub_efi_uintn_t pages)
+
+{
+  return grub_efi_allocate_pages_real(address, pages,
+				      GRUB_EFI_RUNTIME_SERVICES_DATA);
+}
 /* Free pages starting from ADDRESS.  */
 void
 grub_efi_free_pages (grub_efi_physical_address_t address,

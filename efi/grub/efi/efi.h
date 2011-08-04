@@ -48,6 +48,8 @@ void grub_efi_free_pool (void *buffer);
 void *grub_efi_allocate_anypages (grub_efi_uintn_t pages);
 void *grub_efi_allocate_pages (grub_efi_physical_address_t address,
 			       grub_efi_uintn_t pages);
+void *grub_efi_allocate_runtime_pages (grub_efi_physical_address_t address,
+				       grub_efi_uintn_t pages);
 void
 grub_efi_free_pages (grub_efi_physical_address_t address,
 		     grub_efi_uintn_t pages);
