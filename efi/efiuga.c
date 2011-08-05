@@ -38,6 +38,7 @@
 #include "xpm.h"
 
 static grub_efi_guid_t draw_guid = GRUB_EFI_UGA_DRAW_GUID;
+static grub_efi_guid_t pci_io_guid = GRUB_EFI_PCI_IO_GUID;
 
 #if 0
 #define UGA
@@ -865,6 +866,9 @@ static int
 enable(struct graphics_backend *backend)
 {
     struct uga *uga = backend->priv;
+    grub_efi_handle_t *handle, *handles;
+    grub_efi_uintn_t num_handles;
+    grub_efi_pci_io_t *pci_proto;
     int i;
 
     if (uga) {
@@ -878,7 +882,36 @@ enable(struct graphics_backend *backend)
 	grub_memset(uga, '\0', sizeof (*uga));
 
         uga->current_mode = TEXT;
-	uga->draw_intf = grub_efi_locate_protocol(&draw_guid, NULL);
+
+        handles = grub_efi_locate_handle (GRUB_EFI_BY_PROTOCOL,
+                                          &draw_guid, NULL, &num_handles);
+
+        if (!num_handles || !handles)
+	  {
+            grub_free(uga);
+	    return 0;
+	  }
+
+	for (handle = handles; num_handles--; handle++)
+          {
+            pci_proto = grub_efi_open_protocol (*handle, &pci_io_guid,
+				          GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+
+            if (!pci_proto)
+              continue;
+
+            uga->draw_intf = grub_efi_open_protocol (*handle, &draw_guid,
+					  GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+
+            if (uga->draw_intf)
+              {
+                grub_efi_setup_gfx_pci(*handle);
+                break;
+              }
+          }
+
+	grub_free(handles);
+
         if (!uga->draw_intf) {
             grub_free(uga);
             return 0;

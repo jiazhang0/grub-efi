@@ -5,7 +5,7 @@
 #include <grub/cpu/linux.h>
 #include <grub/efi/api.h>
 #include <grub/efi/efi.h>
-#include <grub/misc.h>
+#include <grub/efi/misc.h>
 
 #include <term.h>
 #include <shared.h>
@@ -75,6 +75,97 @@ struct graphics {
 
     unsigned short *text;
 };
+
+static grub_efi_guid_t device_path_guid = GRUB_EFI_DEVICE_PATH_GUID;
+static grub_efi_guid_t pci_io_guid = GRUB_EFI_PCI_IO_GUID;
+static grub_efi_guid_t pci_root_io_guid = GRUB_EFI_PCI_ROOT_IO_GUID;
+
+static void
+grub_efi_configure_pci(grub_efi_handle_t handle)
+{
+  grub_efi_device_path_t *path, *parent;
+  grub_efi_handle_t parent_handle;
+  grub_efi_pci_io_t *pci_proto;
+  grub_efi_pci_root_io_t *pci_root_proto;
+  grub_efi_status_t status;
+
+  path = grub_efi_get_device_path(handle);
+  parent = find_parent_device_path(path);
+
+  if (!parent)
+    return;
+
+  status = grub_efi_locate_device_path (&device_path_guid, &parent,
+					&parent_handle);
+  if (status != GRUB_EFI_SUCCESS)
+    return;
+
+  pci_proto = grub_efi_open_protocol (parent_handle, &pci_io_guid,
+				      GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+
+  pci_root_proto = grub_efi_open_protocol (parent_handle, &pci_root_io_guid,
+					   GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+
+
+  if (pci_proto || pci_root_proto)
+    {
+      if (pci_proto)
+	{
+	  Call_Service_4 (pci_proto->attributes, pci_proto,
+			  grub_efi_pci_io_attribute_operation_enable,
+			  GRUB_EFI_PCI_IO_ATTRIBUTE_VGA_MEMORY |
+			  GRUB_EFI_PCI_IO_ATTRIBUTE_VGA_IO |
+			  GRUB_EFI_PCI_IO_ATTRIBUTE_VGA_PALETTE_IO, NULL);
+
+	  grub_efi_configure_pci (parent_handle);
+	}
+      else
+	{
+	  grub_uint8_t value = 0x33;
+
+	  Call_Service_5 (pci_root_proto->pci.write, pci_root_proto,
+			  grub_efi_pci_io_width_uint8, 0x91, 1, &value);
+	  Call_Service_5 (pci_root_proto->pci.write, pci_root_proto,
+			  grub_efi_pci_io_width_uint8, 0x92, 1, &value);
+	}
+    }
+  grub_free(parent);
+}
+
+void
+grub_efi_setup_gfx_pci(grub_efi_handle_t handle)
+{
+  grub_efi_uint64_t romsize;
+  grub_efi_uint16_t *header;
+  void *vrom;
+  grub_efi_pci_io_t *pci_proto;
+
+  pci_proto = grub_efi_open_protocol (handle, &pci_io_guid,
+				      GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+
+  if (!pci_proto)
+    return;
+
+  romsize = pci_proto->rom_size;
+
+  if (!romsize || romsize > 65536 || !pci_proto->rom_image)
+    return;
+
+  /* Copy the ROM */
+  vrom = grub_efi_allocate_runtime_pages(0xc0000, 16);
+
+  if (!vrom)
+    return;
+
+  header = vrom;
+
+  if (*header == 0xaa55)
+    return;
+
+  grub_efi_configure_pci(handle);
+
+  grub_memcpy(vrom, pci_proto->rom_image, romsize);
+}
 
 void
 graphics_set_kernel_params(struct linux_kernel_params *params)

@@ -17,6 +17,8 @@ struct position {
 };
 typedef struct position position_t;
 
+extern void grub_efi_setup_gfx_pci (grub_efi_handle_t handle);
+
 extern grub_uint16_t grub_console_getwh (void);
 extern void graphics_set_kernel_params(struct linux_kernel_params *params);
 extern void graphics_set_font_position(position_t *pos);

@@ -28,7 +28,7 @@
 #include <grub/cpu/linux.h>
 #include <grub/efi/api.h>
 #include <grub/efi/efi.h>
-#include <grub/misc.h>
+#include <grub/efi/misc.h>
 
 #include <term.h>
 #include <shared.h>
@@ -73,6 +73,7 @@ typedef struct grub_pixel_info grub_pixel_info_t;
 
 
 static grub_efi_guid_t graphics_output_guid = GRUB_EFI_GRAPHICS_OUTPUT_GUID;
+static grub_efi_guid_t pci_io_guid = GRUB_EFI_PCI_IO_GUID;
 
 #ifndef MIN
 #define MIN(x,y) ( ((x) < (y)) ? (x) : (y))
@@ -1373,6 +1374,9 @@ enable(struct graphics_backend *backend)
         }
     } else {
         grub_efi_status_t efi_status;
+	grub_efi_handle_t *handle, *handles;
+	grub_efi_uintn_t num_handles;
+	grub_efi_pci_io_t *pci_proto;
 
         if (!(eg = grub_malloc(sizeof (*eg))))
             return 0;
@@ -1381,7 +1385,34 @@ enable(struct graphics_backend *backend)
 
         eg->backend = backend;
         eg->current_mode = TEXT;
-        eg->output_intf = grub_efi_locate_protocol(&graphics_output_guid, NULL);
+
+	handles = grub_efi_locate_handle (GRUB_EFI_BY_PROTOCOL,
+					  &graphics_output_guid,
+					  NULL, &num_handles);
+
+	if (!num_handles || !handles)
+	  goto fail;
+
+	for (handle = handles; num_handles--; handle++)
+	  {
+	    pci_proto = grub_efi_open_protocol (*handle, &pci_io_guid,
+					 GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+
+	    if (!pci_proto)
+	      continue;
+
+	    eg->output_intf = grub_efi_open_protocol (*handle,
+		   &graphics_output_guid, GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+
+	    if (eg->output_intf)
+	      {
+		grub_efi_setup_gfx_pci(*handle);
+		break;
+	      }
+	  }
+
+	grub_free(handles);
+
         if (!eg->output_intf)
             goto fail;
 
