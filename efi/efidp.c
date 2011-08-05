@@ -66,6 +66,21 @@ find_last_device_path (const grub_efi_device_path_t *dp)
   return p;
 }
 
+/* Return the parent device path node. Must be freed */
+grub_efi_device_path_t *
+find_parent_device_path (const grub_efi_device_path_t *dp)
+{
+  grub_efi_device_path_t *final, *dup;
+
+  dup = duplicate_device_path(dp);
+  final = find_last_device_path(dup);
+
+  final->type = GRUB_EFI_END_DEVICE_PATH_TYPE;
+  final->subtype = GRUB_EFI_END_ENTIRE_DEVICE_PATH_SUBTYPE;
+
+  return dup;
+}
+
 /* Compare device paths.  */
 int
 compare_device_paths (const grub_efi_device_path_t *dp1,

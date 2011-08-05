@@ -46,6 +46,8 @@ void grub_load_saved_default (grub_efi_handle_t dev_handle);
 grub_efi_device_path_t *
 find_last_device_path (const grub_efi_device_path_t *dp);
 grub_efi_device_path_t *
+find_parent_device_path (const grub_efi_device_path_t *dp);
+grub_efi_device_path_t *
 duplicate_device_path (const grub_efi_device_path_t *dp);
 int
 compare_device_paths (const grub_efi_device_path_t *dp1,

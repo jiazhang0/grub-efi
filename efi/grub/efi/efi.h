@@ -26,6 +26,10 @@
 
 /* Functions.  */
 grub_efi_status_t
+grub_efi_locate_device_path (grub_efi_guid_t *protocol,
+                             grub_efi_device_path_t *dp,
+                             grub_efi_handle_t *handle);
+grub_efi_status_t
 grub_efi_locate_handle_buffer (grub_efi_locate_search_type_t search_type,
 				grub_efi_guid_t *protocol,
 				void *search_key,
