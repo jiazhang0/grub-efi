@@ -53,7 +53,7 @@ void grub_longjmp(grub_jmp_buf env, int val)
 
 grub_efi_status_t
 grub_efi_locate_device_path (grub_efi_guid_t *protocol,
-			     grub_efi_device_path_t *dp,
+			     grub_efi_device_path_t **dp,
 			     grub_efi_handle_t *handle)
 {
 	return Call_Service_3(
