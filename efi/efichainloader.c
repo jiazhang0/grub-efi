@@ -26,12 +26,6 @@
 
 #include <shared.h>
 
-#ifdef __x86_64__
-#include </usr/include/efi/x86_64/efibind.h>
-#else
-#include </usr/include/efi/ia32/efibind.h>
-#endif
-
 #define grub_file_size()    filemax
 
 static grub_efi_physical_address_t address;
