@@ -1023,6 +1023,8 @@ int dir (char *dirname);
 
 int set_bootdev (int hdbias);
 
+char *get_fsys_type (void);
+
 /* Display statistics on the current active device. */
 void print_fsys_type (void);
 

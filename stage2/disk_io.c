@@ -1353,6 +1353,12 @@ setup_part (char *filename)
 
 
 #ifndef STAGE1_5
+char *
+get_fsys_type (void)
+{
+    return fsys_table[fsys_type].name;
+}
+
 /*
  *  This prints the filesystem type or gives relevant information.
  */

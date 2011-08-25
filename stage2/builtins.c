@@ -1581,6 +1581,59 @@ static struct builtin builtin_find =
   "Search for the filename FILENAME in all of partitions and print the list of"
   " the devices which contain the file."
 };
+
+/* findiso */
+
+/* Search for an ISO 9660 partition.  */
+static int
+findiso_func (char *arg, int flags)
+{
+  unsigned long drive;
+  unsigned long tmp_drive = saved_drive;
+  unsigned long tmp_partition = saved_partition;
+
+  /* Hard disks.  */
+  for (drive = 0x79; drive < 0x88; drive++)
+    {
+      unsigned long part = 0xFFFFFF;
+
+      if (drive == 0x79)
+	  drive = 0x100;
+
+      current_drive = drive;
+      current_partition = part;
+
+      if (open_device ())
+      {
+	  char *type = get_fsys_type();
+	  if (!grub_strcmp(type, "iso9660"))
+	  {
+	      saved_drive = current_drive;
+	      saved_partition = current_partition;
+	      errnum = ERR_NONE;
+	      return 0;
+	  }
+      }
+
+      /* We want to ignore any error here.  */
+      errnum = ERR_NONE;
+    }
+
+  saved_drive = tmp_drive;
+  saved_partition = tmp_partition;
+
+  errnum = ERR_FILE_NOT_FOUND;
+  return 1;
+}
+
+static struct builtin builtin_findiso =
+{
+  "findiso",
+  findiso_func,
+  BUILTIN_CMDLINE | BUILTIN_HELP_LIST,
+  "findiso FILENAME",
+  "Set root to the first device with a valid ISO 9660 filesystem."
+};
 
 
 /* fstest */
@@ -5267,6 +5320,7 @@ struct builtin *builtin_table[] =
 #endif
   &builtin_fallback,
   &builtin_find,
+  &builtin_findiso,
 #ifdef SUPPORT_GRAPHICS
   &builtin_foreground,
 #endif
