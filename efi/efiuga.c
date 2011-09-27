@@ -912,6 +912,9 @@ enable(struct graphics_backend *backend)
 
 	grub_free(handles);
 
+	if (!uga->draw_intf)
+	    uga->draw_intf = grub_efi_locate_protocol(&draw_guid, NULL);
+
         if (!uga->draw_intf) {
             grub_free(uga);
             return 0;

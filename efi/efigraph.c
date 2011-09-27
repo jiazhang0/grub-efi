@@ -1413,6 +1413,9 @@ enable(struct graphics_backend *backend)
 
 	grub_free(handles);
 
+	if (!eg->output_intf)
+	    eg->output_intf = grub_efi_locate_protocol(&graphics_output_guid, NULL);
+
         if (!eg->output_intf)
             goto fail;
 
