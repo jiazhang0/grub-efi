@@ -465,8 +465,7 @@ grub_efidisk_get_current_bdev_handle (void)
 	       == GRUB_EFI_MEDIA_DEVICE_PATH_TYPE)
 	      && (GRUB_EFI_DEVICE_PATH_SUBTYPE (c->last_device_path)
 		  == GRUB_EFI_HARD_DRIVE_DEVICE_PATH_SUBTYPE)
-	      && (part_start == hd.partition_start)
-	      && (part_length == hd.partition_size))
+	      && (part_start == hd.partition_start))
 	    {
 	      handle = c->handle;
 	      return 1;
@@ -594,8 +593,7 @@ grub_get_drive_partition_from_bdev_handle (grub_efi_handle_t handle,
 			 &gpt_size, buf))
     {
       if (part_type
-	  && partition_start == hd.partition_start
-	  && partition_len == hd.partition_size)
+	  && partition_start == hd.partition_start)
 	{
 	  *drive = drv;
 	  *partition = part;
