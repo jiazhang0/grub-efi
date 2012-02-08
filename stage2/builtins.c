@@ -1593,11 +1593,11 @@ findiso_func (char *arg, int flags)
   unsigned long tmp_partition = saved_partition;
 
   /* Hard disks.  */
-  for (drive = 0x79; drive < 0x88; drive++)
+  for (drive = 0x80; drive < 0x89; drive++)
     {
       unsigned long part = 0xFFFFFF;
 
-      if (drive == 0x79)
+      if (drive == 0x88)
 	  drive = 0x100;
 
       current_drive = drive;
