@@ -11,7 +11,7 @@ noinst_HEADERS = apic.h defs.h dir.h disk_inode.h disk_inode_ffs.h \
 EXTRA_DIST = setjmp.S apm.S $(noinst_SCRIPTS)
 
 # For <stage1.h>.
-INCLUDES = -I$(top_srcdir)/stage1
+INCLUDES = -I$(top_srcdir)/stage1 -I$(top_srcdir)/efi
 
 # The library for /sbin/grub.
 if PLATFORM_EFI
@@ -21,7 +21,7 @@ noinst_LIBRARIES = libgrub.a
 endif
 libgrub_a_SOURCES = boot.c builtins.c char_io.c cmdline.c common.c \
 	disk_io.c fsys_ext2fs.c fsys_fat.c fsys_ffs.c fsys_iso9660.c \
-	fsys_jfs.c fsys_minix.c fsys_reiserfs.c fsys_ufs2.c \
+	fsys_jfs.c fsys_minix.c fsys_reiserfs.c fsys_uefi.c fsys_ufs2.c \
 	fsys_vstafs.c fsys_xfs.c gunzip.c md5.c serial.c sha256crypt.c \
 	sha512crypt.c stage2.c terminfo.c tparm.c graphics.c efistubs.c
 libgrub_a_CFLAGS = $(GRUB_CFLAGS) -I$(top_srcdir)/lib \
@@ -98,7 +98,7 @@ STAGE2_COMPILE = $(STAGE2_CFLAGS) -fno-builtin -nostdinc \
 
 libstage2_a_SOURCES = boot.c builtins.c char_io.c cmdline.c common.c \
 	disk_io.c fsys_ext2fs.c fsys_fat.c fsys_ffs.c fsys_iso9660.c \
-	fsys_jfs.c fsys_minix.c fsys_reiserfs.c fsys_ufs2.c \
+	fsys_jfs.c fsys_minix.c fsys_reiserfs.c fsys_uefi.c fsys_ufs2.c \
 	fsys_vstafs.c fsys_xfs.c gunzip.c md5.c serial.c sha256crypt.c \
 	sha512crypt.c stage2.c terminfo.c tparm.c efistubs.c
 libstage2_a_CFLAGS = $(STAGE2_COMPILE) $(FSYS_CFLAGS)

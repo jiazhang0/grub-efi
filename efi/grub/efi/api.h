@@ -1620,10 +1620,10 @@ struct grub_efi_file
   grub_efi_status_t (*write) (struct grub_efi_file * this,
 			      grub_efi_uintn_t * buffer_size,
 			      void * buffer);
-  grub_efi_status_t (*set_position) (struct grub_efi_file * this,
-				     grub_efi_uint64_t position);
   grub_efi_status_t (*get_position) (struct grub_efi_file * this,
 				     grub_efi_uint64_t * position);
+  grub_efi_status_t (*set_position) (struct grub_efi_file * this,
+				     grub_efi_uint64_t position);
   grub_efi_status_t (*get_info) (struct grub_efi_file * this,
 				 grub_efi_guid_t * information_type,
 				 grub_efi_uintn_t * buffer_size,

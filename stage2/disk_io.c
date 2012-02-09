@@ -83,6 +83,9 @@ struct fsys_entry fsys_table[NUM_FSYS + 1] =
 # ifdef FSYS_UFS2
   {"ufs2", ufs2_mount, ufs2_read, ufs2_dir, 0, ufs2_embed},
 # endif
+# ifdef PLATFORM_EFI
+  {"uefi", uefi_mount, uefi_read, uefi_dir, 0, 0},
+# endif
 # ifdef FSYS_ISO9660
   {"iso9660", iso9660_mount, iso9660_read, iso9660_dir, 0, 0},
 # endif
