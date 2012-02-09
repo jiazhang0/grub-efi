@@ -121,11 +121,9 @@ uefi_dir (char *dirname)
       fileinfo = grub_malloc(buffersize);
       continue;
     } else if (status) {
-      console_getkey();
       goto done;
     }
     if (buffersize == 0) {
-      console_getkey();
       goto done;
     }
 
@@ -157,7 +155,7 @@ uefi_dir (char *dirname)
   return ret;
 }
 
-int
+void
 uefi_close (void)
 {
   grub_efi_status_t status = 0;
@@ -166,8 +164,6 @@ uefi_close (void)
     status = Call_Service_1 (file->close, file);
 
   file = NULL;
-
-  return 1;
 }
 
 int 

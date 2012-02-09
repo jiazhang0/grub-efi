@@ -367,7 +367,7 @@ extern void *grub_scratch_mem;
 #define memcpy grub_memmove	/* we don't need a separate memcpy */
 #define memset grub_memset
 #define isspace grub_isspace
-#define printf grub_printf
+#define printf(format...) grub_printf(format)
 #define sprintf grub_sprintf
 #undef putchar
 #define putchar grub_putchar
