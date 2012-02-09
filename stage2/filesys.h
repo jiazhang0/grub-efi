@@ -45,6 +45,7 @@ int ufs2_embed (int *start_sector, int needed_sectors);
 int uefi_mount (void);
 int uefi_read (char *buf, int len);
 int uefi_dir (char *dirname);
+int uefi_close (void);
 #else
 #define FSYS_UEFI_NUM 0
 #endif
