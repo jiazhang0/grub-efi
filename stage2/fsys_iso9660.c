@@ -81,8 +81,6 @@ iso9660_devread (int sector, int byte_offset, int byte_len, char *buf)
   if (byte_len <= 0)
     return 1;
 
-  sector += (byte_offset >> sector_size_lg2);
-  byte_offset &= (buf_geom.sector_size - 1);
   asm volatile ("shl%L0 %1,%0"
 		: "=r"(sector)
 		: "Ic"((int8_t)(ISO_SECTOR_BITS - sector_size_lg2)),
