@@ -346,11 +346,23 @@ char *grub_efi_pxe_get_config_path(grub_efi_loaded_image_t *LoadedImage)
 	char hexip[9];
 	int hexiplen;
 
-	pxe = grub_efi_locate_protocol(&PxeBaseCodeProtocol, NULL);
-	if (pxe == NULL)
-		return NULL;
+	grub_efi_handle_t *handle, *handles;
+	grub_efi_uintn_t num_handles;
 
-	if (!pxe->Mode->Started)
+	handles = grub_efi_locate_handle(GRUB_EFI_BY_PROTOCOL,
+					&PxeBaseCodeProtocol,
+					NULL, &num_handles);
+	for (handle = handles; num_handles--; handle++) {
+		pxe = grub_efi_open_protocol(*handle, &PxeBaseCodeProtocol,
+			GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+		if (!pxe || !pxe->Mode)
+			continue;
+		if (pxe->Mode->Started && pxe->Mode->DhcpAckReceived)
+			break;
+	}
+	grub_free(handles);
+
+	if (!pxe)
 		return NULL;
 
 	set_pxe_info(LoadedImage, pxe);
