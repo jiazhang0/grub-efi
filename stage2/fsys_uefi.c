@@ -93,56 +93,86 @@ uefi_dir (char *dirname)
 
   file_name_w[i] = '\0';
 
-  dir_name_w = grub_malloc (2 * dirlen + 2);
-  if (!dir_name_w)
-    goto done;
-
-  for (i=0; i<dirlen; i++)
-    dir_name_w[i] = file_name_w[i];
-
-  dir_name_w[i] = '\0';
-
   status = Call_Service_5 (root->open, root, &file, file_name_w,
 			   GRUB_EFI_FILE_MODE_READ, 0);
 
   if (status != GRUB_EFI_SUCCESS)
     goto done;
 
-  status = Call_Service_5 (root->open, root, &directory, dir_name_w,
-			   GRUB_EFI_FILE_MODE_READ, 0);
+  if (dirname[i-1] == '/') {
+    if (print_possibilities)
+      grub_printf("\n");
 
-  while (1) {
-    int filenamelen;
-    int invalid = 0;
+    while (1) {
+      int filenamelen;
 
-    status = Call_Service_3 (directory->read, directory, &buffersize, fileinfo);
+      status = Call_Service_3 (file->read, file, &buffersize, fileinfo);
 
-    if (status == GRUB_EFI_BUFFER_TOO_SMALL) {
-      fileinfo = grub_malloc(buffersize);
-      continue;
-    } else if (status) {
-      goto done;
+      if (status == GRUB_EFI_BUFFER_TOO_SMALL) {
+	fileinfo = grub_malloc(buffersize);
+	continue;
+      } else if (status) {
+	goto done;
+      } else if (buffersize == 0) {
+	ret = 1;
+	if (print_possibilities)
+	  grub_printf("\n");
+	goto done;
+      }
+
+      filenamelen = fileinfo->size - sizeof(*fileinfo);
+
+      if (print_possibilities) {
+	for (i=0; i<filenamelen/2; i++)
+	  grub_printf("%c", (char)fileinfo->filename[i]);
+      }
+      grub_printf(" ");
     }
-    if (buffersize == 0) {
+  } else {
+    dir_name_w = grub_malloc (2 * dirlen + 2);
+    if (!dir_name_w)
       goto done;
+
+    for (i=0; i<dirlen; i++)
+      dir_name_w[i] = file_name_w[i];
+
+    dir_name_w[i] = '\0';
+
+    status = Call_Service_5 (root->open, root, &directory, dir_name_w,
+			     GRUB_EFI_FILE_MODE_READ, 0);
+
+    while (1) {
+      int filenamelen;
+      int invalid = 0;
+
+      status = Call_Service_3 (directory->read, directory, &buffersize, fileinfo);
+
+      if (status == GRUB_EFI_BUFFER_TOO_SMALL) {
+	fileinfo = grub_malloc(buffersize);
+	continue;
+      } else if (status) {
+	goto done;
+      } else if (buffersize == 0) {
+	goto done;
+      }
+
+      filenamelen = fileinfo->size - sizeof(*fileinfo);
+
+      if (filenamelen != ((strlen(dirname) - dirlen) * 2))
+	continue;
+
+      for (i=0; i<filenamelen/2; i++)
+	if (fileinfo->filename[i] != file_name_w[i + dirlen + 1])
+	  invalid = 1;
+
+      if (!invalid)
+	break;
     }
 
-    filenamelen = fileinfo->size - sizeof(*fileinfo);
-
-    if (filenamelen != ((strlen(dirname) - dirlen) * 2))
-      continue;
-
-    for (i=0; i<filenamelen/2; i++)
-      if (fileinfo->filename[i] != file_name_w[i + dirlen + 1])
-	invalid = 1;
-
-    if (!invalid)
-      break;
+    ret = 1;
+    filemax = fileinfo->filesize;
+    filepos = 0;
   }
-
-  ret = 1;
-  filemax = fileinfo->filesize;
-  filepos = 0;
 
  done:
   if (fileinfo)
