@@ -184,7 +184,7 @@ LOADER_LDFLAGS="-Wl,--build-id=none ${LIBGCC}"
 AC_SUBST(LOADER_LDFLAGS)
 
 if test "x$platform" = xefi; then
-  STAGE2_CFLAGS="$STAGE2_CFLAGS -fpic -fshort-wchar -fno-strict-aliasing -fno-merge-constants"
+  STAGE2_CFLAGS="$STAGE2_CFLAGS -fpic -fshort-wchar -fno-strict-aliasing -fno-merge-constants -fno-reorder-functions"
   if test "x$EFI_ARCH" = xx86_64; then
      STAGE2_CFLAGS="$STAGE2_CFLAGS -DEFI_FUNCTION_WRAPPER"
   fi
