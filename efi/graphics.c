@@ -642,6 +642,7 @@ graphics_init(void)
         }
         backend->graphics = NULL;
     }
+    current_term = term_table;
     grub_free(graphics->text);
     grub_free(graphics);
     return 0;
