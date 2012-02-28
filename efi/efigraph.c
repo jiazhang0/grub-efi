@@ -1428,10 +1428,10 @@ enable(struct graphics_backend *backend)
         memset(eg->modes, '\0', eg->max_mode * sizeof (void *));
 
         for (i = 0; i < eg->max_mode; i++) {
-            eg->modes[i] = grub_malloc(sizeof eg->modes[0]);
+            eg->modes[i] = grub_malloc(sizeof *(eg->modes[0]));
             if (!eg->modes[i])
                 goto fail;
-            memset(eg->modes[i], '\0', sizeof (eg->modes[0]));
+            memset(eg->modes[i], '\0', sizeof *(eg->modes[0]));
             eg->modes[i]->number = i;
 
             efi_status = Call_Service_4(eg->output_intf->query_mode,
