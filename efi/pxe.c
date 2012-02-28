@@ -352,6 +352,10 @@ char *grub_efi_pxe_get_config_path(grub_efi_loaded_image_t *LoadedImage)
 	handles = grub_efi_locate_handle(GRUB_EFI_BY_PROTOCOL,
 					&PxeBaseCodeProtocol,
 					NULL, &num_handles);
+
+	if (!handles)
+	  return NULL;
+
 	for (handle = handles; num_handles--; handle++) {
 		pxe = grub_efi_open_protocol(*handle, &PxeBaseCodeProtocol,
 			GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
