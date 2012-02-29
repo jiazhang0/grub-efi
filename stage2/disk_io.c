@@ -688,7 +688,9 @@ next_partition (unsigned long drive, unsigned long dest,
 	}
 
       /* If this is a GPT partition table, read it as such.  */
-      if (*entry == -1 && *offset == 0 && PC_SLICE_TYPE (buf, 0) == PC_SLICE_TYPE_GPT)
+      if (*entry == -1 && *offset == 0 &&
+	  (PC_SLICE_TYPE (buf, 0) == PC_SLICE_TYPE_GPT ||
+	   PC_SLICE_TYPE (buf, 0) == PC_SLICE_TYPE_NONE))
        {
          struct grub_gpt_header *hdr = (struct grub_gpt_header *) buf;
 
