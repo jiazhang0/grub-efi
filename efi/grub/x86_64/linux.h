@@ -85,10 +85,16 @@ struct grub_linux_kernel_header
   grub_uint32_t initrd_addr_max;/* Highest address for initrd */
   grub_uint32_t kernel_alignment;
   grub_uint8_t relocatable_kernel;
-  grub_uint8_t pad2[3];
+  grub_uint8_t min_alignment;
+  grub_uint8_t pad2[2];
   grub_uint32_t cmdline_size;
   grub_uint32_t hardware_subarch;
   grub_uint64_t hardware_subarch_data;
+  grub_uint32_t payload_offset;
+  grub_uint32_t payload_length;
+  grub_uint64_t setup_data;
+  grub_uint64_t pref_address;
+  grub_uint32_t init_size;
 } __attribute__ ((packed));
 
 /* Boot parameters for Linux based on 2.6.12. This is used by the setup

@@ -132,7 +132,7 @@ allocate_pages (grub_size_t real_size, grub_size_t prot_size)
                         (unsigned) desc->physical_start,
                         (unsigned) physical_end);
           addr = physical_end - real_size;
-          if (addr < 0x10000)
+          if (addr < 0x100000)
             continue;
 
           /* the kernel wants this address to be under 1 gig.*/
@@ -274,8 +274,11 @@ grub_load_linux (char *kernel, char *arg)
   static struct linux_kernel_params params_buf;
   grub_uint8_t setup_sects;
   grub_size_t real_size, prot_size;
+  grub_uint64_t kernel_base, kernel_length, kernel_pages;
   grub_ssize_t len;
   char *dest;
+  int align, min_alignment;
+  int relocatable = 0;
 
   if (kernel == NULL)
     {
@@ -459,6 +462,78 @@ grub_load_linux (char *kernel, char *arg)
   len = prot_size;
   if (grub_read ((char *)prot_mode_mem, len) != len)
     grub_printf ("Couldn't read file");
+
+  if (lh->version >= 0x205) {
+    for (align = lh->min_alignment; align < 32; align++) {
+      if (lh->kernel_alignment & (1 << align)) {
+	break;
+      }
+    }
+    relocatable = lh->relocatable_kernel;
+  }
+
+  if (lh->version >= 0x20a) {
+    kernel_base = lh->pref_address;
+    kernel_length = lh->init_size;
+    min_alignment = lh->min_alignment;
+  } else {
+    kernel_base = lh->code32_start;
+    kernel_length = prot_kernel_size;
+    min_alignment = 0;
+  }
+
+  kernel_pages = (kernel_length + 4095) >> 12;
+
+  /* Attempt to allocate address space for the kernel */
+  kernel_base = grub_efi_allocate_pages(kernel_base, kernel_pages);
+
+  if (!kernel_base && relocatable) {
+    grub_efi_memory_descriptor_t *desc;
+    grub_efi_memory_descriptor_t tdesc;
+    grub_efi_uintn_t desc_size;
+
+    if (grub_efi_get_memory_map (0, &desc_size, 0) <= 0)
+      grub_fatal ("cannot get memory map");
+
+    while (align >= min_alignment) {
+      for (desc = mmap_buf;
+	   desc < NEXT_MEMORY_DESCRIPTOR (mmap_buf, mmap_size);
+	   desc = NEXT_MEMORY_DESCRIPTOR (desc, desc_size))
+	{
+	  grub_uint64_t addr;
+	  grub_uint64_t alignval = (1 << align) - 1;
+
+	  if (desc->type != GRUB_EFI_CONVENTIONAL_MEMORY)
+	    continue;
+
+	  memcpy(&tdesc, desc, sizeof(tdesc));
+
+	  addr = (tdesc.physical_start + alignval) & ~(alignval);
+
+	  if ((addr + kernel_length) >
+	      (tdesc.physical_start + (tdesc.num_pages << 12)))
+	    continue;
+
+	  kernel_base = grub_efi_allocate_pages(addr, kernel_pages);
+
+	  if (kernel_base) {
+	    lh->kernel_alignment = 1 << align;
+	    break;
+	  }
+	}
+      align--;
+      if (kernel_base)
+	break;
+    }
+  }
+
+  if (!kernel_base) {
+    grub_printf("Failed to allocate kernel memory");
+    errnum = ERR_UNRECOGNIZED;
+    goto fail;
+  }
+
+  lh->code32_start = kernel_base;
 
   if (errnum == ERR_NONE)
     {
