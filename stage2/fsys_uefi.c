@@ -161,9 +161,14 @@ uefi_dir (char *dirname)
       if (filenamelen != ((strlen(dirname) - dirlen) * 2))
 	continue;
 
-      for (i=0; i<filenamelen/2; i++)
-	if (fileinfo->filename[i] != file_name_w[i + dirlen + 1])
-	  invalid = 1;
+      for (i=0; i<filenamelen/2; i++) {
+	if (fileinfo->filename[i] != file_name_w[i + dirlen + 1]) {
+	  if (fileinfo->filename[i] > 0xff ||
+	      (grub_tolower(fileinfo->filename[i]) !=
+	       grub_tolower(file_name_w[i + dirlen + 1])))
+	    invalid = 1;
+	}
+      }
 
       if (!invalid)
 	break;
