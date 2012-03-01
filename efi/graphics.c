@@ -122,11 +122,17 @@ grub_efi_configure_pci(grub_efi_handle_t handle)
       else
 	{
 	  grub_uint8_t value = 0x33;
+	  grub_uint16_t vendor;
 
-	  Call_Service_5 (pci_root_proto->pci.write, pci_root_proto,
-			  grub_efi_pci_io_width_uint8, 0x91, 1, &value);
-	  Call_Service_5 (pci_root_proto->pci.write, pci_root_proto,
-			  grub_efi_pci_io_width_uint8, 0x92, 1, &value);
+	  Call_Service_5 (pci_root_proto->pci.read, pci_root_proto,
+			  grub_efi_pci_io_width_uint16, 0x00, 1, &vendor);
+
+	  if (vendor == 0x8086) {
+	    Call_Service_5 (pci_root_proto->pci.write, pci_root_proto,
+			    grub_efi_pci_io_width_uint8, 0x91, 1, &value);
+	    Call_Service_5 (pci_root_proto->pci.write, pci_root_proto,
+			    grub_efi_pci_io_width_uint8, 0x92, 1, &value);
+	  }
 	}
     }
   grub_free(parent);
