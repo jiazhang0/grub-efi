@@ -485,7 +485,7 @@ grub_load_linux (char *kernel, char *arg)
   kernel_pages = (kernel_length + 4095) >> 12;
 
   /* Attempt to allocate address space for the kernel */
-  kernel_base = grub_efi_allocate_pages(kernel_base, kernel_pages);
+  kernel_base = (grub_uint64_t)grub_efi_allocate_pages(kernel_base, kernel_pages);
 
   if (!kernel_base && relocatable) {
     grub_efi_memory_descriptor_t *desc;
@@ -514,7 +514,7 @@ grub_load_linux (char *kernel, char *arg)
 	      (tdesc.physical_start + (tdesc.num_pages << 12)))
 	    continue;
 
-	  kernel_base = grub_efi_allocate_pages(addr, kernel_pages);
+	  kernel_base = (grub_uint64_t)grub_efi_allocate_pages(addr, kernel_pages);
 
 	  if (kernel_base) {
 	    lh->kernel_alignment = 1 << align;
