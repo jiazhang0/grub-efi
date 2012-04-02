@@ -522,6 +522,7 @@ grub_get_drive_partition_from_bdev_handle (grub_efi_handle_t handle,
     {
       grub_efi_uint8_t type = GRUB_EFI_DEVICE_PATH_TYPE (dp1);
       grub_efi_uint8_t subtype = GRUB_EFI_DEVICE_PATH_SUBTYPE(dp1);
+      grub_efi_uint16_t len = GRUB_EFI_DEVICE_PATH_LENGTH (dp);
 
       if (type == GRUB_EFI_MEDIA_DEVICE_PATH_TYPE &&
 	      subtype == GRUB_EFI_CDROM_DEVICE_PATH_SUBTYPE)
@@ -530,6 +531,23 @@ grub_get_drive_partition_from_bdev_handle (grub_efi_handle_t handle,
 	  dp1->subtype = GRUB_EFI_END_ENTIRE_DEVICE_PATH_SUBTYPE;
 	  dp1->length[0] = 4;
 	  dp1->length[1] = 0;
+	}
+
+      if (type == GRUB_EFI_MEDIA_DEVICE_PATH_TYPE &&
+	  subtype == GRUB_EFI_HARD_DRIVE_DEVICE_PATH_SUBTYPE)
+	{
+	  grub_efi_hard_drive_device_path_t temp_hd;
+	  grub_memcpy (&temp_hd, dp1, len);
+	  if (temp_hd.signature_type == 0 && temp_hd.mbr_type >= 0x10) {
+	    /*
+	     * Apple Parttion Map CDs appear as hard drives with non-spec
+	     * partition type fields. Fix them up.
+	     */
+	    dp1->type = GRUB_EFI_END_DEVICE_PATH_TYPE;
+	    dp1->subtype = GRUB_EFI_END_ENTIRE_DEVICE_PATH_SUBTYPE;
+	    dp1->length[0] = 4;
+	    dp1->length[1] = 0;
+	  }
 	}
 
       if (GRUB_EFI_END_ENTIRE_DEVICE_PATH (dp1))
