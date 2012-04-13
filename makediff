@@ -1,4 +1,5 @@
 #!/bin/bash
+(
 cat << EOF
 From: Peter Jones <pjones@redhat.com>" 
 Date: $(date)
@@ -17,3 +18,4 @@ EOF
 git diff grub-0.97 fedora-18 | diffstat -p1
 echo
 git diff grub-0.97 fedora-18
+) | cat
