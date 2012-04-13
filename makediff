@@ -7,7 +7,7 @@ Subject: [PATCH] Changes from grub-0.97 to fedora-18
 This patch is a bundle of the changes between grub-0.97 and fedora-18.
 It can be reginerated from the git repository at:
 
-http://git.kernel.org/?p=boot/grub-fedora/grub-fedora.git;a=summary
+git://github.com/vathpela/grub-fedora.git
 
 Using the command:
 
