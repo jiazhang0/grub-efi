@@ -129,6 +129,7 @@ uefi_dir (char *dirname)
       grub_printf(" ");
     }
   } else {
+    char *data = NULL;
     dir_name_w = grub_malloc (2 * dirlen + 2);
     if (!dir_name_w)
       goto done;
@@ -174,6 +175,39 @@ uefi_dir (char *dirname)
 	break;
     }
 
+    if (fileinfo->filesize < 256 && fileinfo->filesize > 3)
+      {
+	data = grub_malloc(fileinfo->filesize);
+	filepos = 0;
+
+	uefi_read(data, fileinfo->filesize);
+
+	/*
+	 * UEFI doesn't really support symlinks. Apple's UEFI driver exposes
+	 * them as files containing the path of the target. This provides
+	 * hacky support in the absence of a real driver.
+	 */
+	if (data[0] == '.' && data[1] == '.' && data[2] == '/')
+	  {
+	    int j;
+	    char *tmpdir = grub_malloc(dirlen + fileinfo->filesize);
+
+	    for (j=0; j<dirlen+1; j++)
+	      tmpdir[j] = dirname[j];
+	    for (j=0; j<fileinfo->filesize; j++)
+	      tmpdir[j+dirlen+1] = data[j];
+	    tmpdir[j+dirlen+1] = '\0';
+
+	    /* Open the new file */
+	    ret = uefi_dir(tmpdir);
+	    grub_free (tmpdir);
+	    grub_free (data);
+	    goto done;
+	  }
+      }
+
+    if (data)
+      grub_free(data);
     ret = 1;
     filemax = fileinfo->filesize;
     filepos = 0;
