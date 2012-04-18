@@ -183,7 +183,7 @@ linux_boot (void)
   for (;;);
 }
 
-void
+static void
 grub_efi_disable_network (void)
 {
   grub_efi_guid_t pci_io_guid = GRUB_EFI_PCI_IO_GUID;
