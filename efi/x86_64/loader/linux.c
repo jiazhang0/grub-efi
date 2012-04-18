@@ -184,6 +184,101 @@ linux_boot (void)
 }
 
 void
+grub_efi_disable_network (void)
+{
+  grub_efi_guid_t pci_io_guid = GRUB_EFI_PCI_IO_GUID;
+  grub_efi_pci_io_t *pci_proto;
+  grub_efi_uintn_t num_handles;
+  grub_efi_handle_t *handle, *handles;
+
+  handles = grub_efi_locate_handle (GRUB_EFI_BY_PROTOCOL,
+					  &pci_io_guid,
+					  NULL, &num_handles);
+  if (!handles || !num_handles)
+    return;
+
+  for (handle = handles; num_handles--; handle++)
+    {
+      grub_efi_uint8_t class, pos, id, pm = 0;
+      grub_efi_uint16_t pm_state, vendor;
+      int ttl = 48;
+
+      pci_proto = grub_efi_open_protocol (*handle, &pci_io_guid,
+					  GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+
+      if (!pci_proto)
+	continue;
+
+      Call_Service_5 (pci_proto->pci.read, pci_proto,
+		      grub_efi_pci_io_width_uint8, 0x0b, 1, &class);
+
+      /* Not a network device */
+      if (class != 0x02)
+	continue;
+
+      Call_Service_5 (pci_proto->pci.read, pci_proto,
+		      grub_efi_pci_io_width_uint16, 0x00, 1, &vendor);
+
+      /* Not a Broadcom */
+      if (vendor != 0x14e4)
+	continue;
+
+      Call_Service_5 (pci_proto->pci.read, pci_proto,
+		      grub_efi_pci_io_width_uint16, 0x2c, 1, &vendor);
+
+      /* Not an Apple */
+      if (vendor != 0x106b)
+	continue;
+
+      pos = 0x34;
+
+      /* Find the power management registers */
+      while (ttl--)
+	{
+	  Call_Service_5 (pci_proto->pci.read, pci_proto,
+			  grub_efi_pci_io_width_uint8, pos, 1, &pos);
+
+	  if (pos < 0x40)
+	    break;
+
+	  pos &= ~3;
+
+	  Call_Service_5 (pci_proto->pci.read, pci_proto,
+			  grub_efi_pci_io_width_uint8, pos, 1, &id);
+
+	  if (id == 0xff)
+	    break;
+
+	  if (id == 0x01)
+	    {
+	      pm = pos;
+	      break;
+	    }
+
+	  pos += 1;
+	}
+
+      if (pm)
+	{
+	  Call_Service_5 (pci_proto->pci.read, pci_proto,
+			  grub_efi_pci_io_width_uint16, pm + 4, 1, &pm_state);
+
+	  pm_state &= ~0x03;
+	  pm_state |= 0x03;
+
+	  /* Set to D3 */
+
+	  Call_Service_5 (pci_proto->pci.write, pci_proto,
+			  grub_efi_pci_io_width_uint16, pm + 4, 1, &pm_state);
+
+	  Call_Service_5 (pci_proto->pci.read, pci_proto,
+			  grub_efi_pci_io_width_uint16, pm + 4, 1,
+			  &pm_state);
+	}
+    }
+}
+
+void
 big_linux_boot (void)
 {
   struct linux_kernel_params *params;
@@ -204,6 +299,8 @@ big_linux_boot (void)
   e820_map_from_efi_map ((struct e820_entry *) params->e820_map, &e820_nr_map,
 			 mmap_buf, desc_size, mmap_size);
   params->e820_nr_map = e820_nr_map;
+
+  grub_efi_disable_network();
 
   if (! grub_efi_exit_boot_services (map_key))
     grub_fatal ("cannot exit boot services");
