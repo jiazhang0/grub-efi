@@ -105,7 +105,7 @@ extern inline void outs##s(unsigned short port, const void * addr, unsigned long
 
 __IN(b,"", char)
 __IN(w,"",short)
-__IN(l,"", long)
+__IN(l,"", int)
 
 __OUT(b,"b",char)
 __OUT(w,"w",short)
