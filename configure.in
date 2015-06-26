@@ -177,7 +177,7 @@ if test "x$ac_cv_prog_gcc" = xyes; then
 fi
 STAGE2_CFLAGS="$STAGE2_CFLAGS -isystem `$CC -print-file-name=include`"
 
-LIBGCC=$(gcc $CFLAGS -static-libgcc -print-libgcc-file-name)
+LIBGCC=$($CC $CFLAGS -static-libgcc -print-libgcc-file-name)
 AC_SUBST(LIBGCC)
 
 LOADER_LDFLAGS="-Wl,--build-id=none ${LIBGCC}"
