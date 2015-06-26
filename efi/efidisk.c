@@ -208,6 +208,10 @@ name_devices (struct grub_efidisk_data *devices)
 	{
 	  add_device (&fd_devices, d);
 	}
+      if (GRUB_EFI_DEVICE_PATH_TYPE(dp) == GRUB_EFI_HARDWARE_DEVICE_PATH_TYPE)
+	{
+	  add_device (&hd_devices, d);
+	}
     }
 }
 
