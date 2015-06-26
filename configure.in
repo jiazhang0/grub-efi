@@ -63,7 +63,7 @@ if test "x$platform" = xefi; then
   AC_SUBST(EFI_ARCH)
 fi
 
-gnuefi_path=${libdir}/gnuefi
+gnuefi_path=${libdir}
 gnuefi_crt0=${gnuefi_path}/crt0-efi-${EFI_ARCH}.o
 if ! test -f $gnuefi_crt0 ; then
   gnuefi_crt0=crt0-efi.o
