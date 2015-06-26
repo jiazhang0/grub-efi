@@ -15,7 +15,7 @@ INCLUDES = -I$(top_srcdir)/stage1 -I$(top_srcdir)/efi
 
 # The library for /sbin/grub.
 if PLATFORM_EFI
-noinst_LIBRARIES = libgrub.a libstage2.a
+noinst_LIBRARIES = libstage2.a
 else
 noinst_LIBRARIES = libgrub.a
 endif
