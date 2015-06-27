@@ -292,6 +292,8 @@ big_linux_boot (void)
 
   graphics_set_kernel_params (params);
 
+  grub_efi_disable_network();
+
   if (grub_efi_get_memory_map (&map_key, &desc_size, &desc_version) <= 0)
     grub_fatal ("cannot get memory map");
 
@@ -299,8 +301,6 @@ big_linux_boot (void)
   e820_map_from_efi_map ((struct e820_entry *) params->e820_map, &e820_nr_map,
 			 mmap_buf, desc_size, mmap_size);
   params->e820_nr_map = e820_nr_map;
-
-  grub_efi_disable_network();
 
   if (! grub_efi_exit_boot_services (map_key))
     grub_fatal ("cannot exit boot services");
