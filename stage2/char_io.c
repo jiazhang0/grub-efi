@@ -20,6 +20,15 @@
 
 #include <shared.h>
 #include <term.h>
+#ifdef PLATFORM_EFI
+#undef GRUB_UTIL
+
+#include <grub/types.h>
+#include <grub/misc.h>
+#include <grub/efi/efi.h>
+#include <grub/efi/misc.h>
+#include <grub/efi/api.h>
+#endif
 
 #ifdef SUPPORT_HERCULES
 # include <hercules.h>
@@ -1547,6 +1556,23 @@ grub_strncasecmp(const char *s0, const char *s1, int n)
 
   return (c0 > c1 ? 1 : c0 < c1 ? -1 : 0);
 }
+
+#ifdef PLATFORM_EFI
+char *
+grub_strdup(const char *s)
+{
+  int len;
+  char *d;
+
+  len = grub_strlen (s) + 1;
+  d = grub_malloc (len);
+  if (!d)
+    return NULL;
+
+  grub_strcpy (d, s);
+  return d;
+}
+#endif
 
 #endif /* ! STAGE1_5 */
 

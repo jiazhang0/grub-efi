@@ -387,6 +387,9 @@ extern void *grub_scratch_mem;
 #define strnchr grub_strnchr
 #define strncpy grub_strncpy
 #define strncasecmp grub_strncasecmp
+#ifdef PLATFORM_EFI
+#define strdup grub_strdup
+#endif
 #endif /* WITHOUT_LIBC_STUBS */
 
 #ifndef ASM_FILE
@@ -934,6 +937,9 @@ char *grub_strnchr (const char *s, int c);
 int grub_strnlen (const char *s, int n);
 char *grub_strncpy (char *new, const char *s, int n);
 int grub_strncasecmp(const char *s0, const char *s1, int n);
+#ifdef PLATFORM_EFI
+char *grub_strdup(const char *s);
+#endif
 
 #ifndef GRUB_UTIL
 typedef unsigned long grub_jmp_buf[8];
