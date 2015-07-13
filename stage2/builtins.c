@@ -2741,8 +2741,9 @@ kernel_func (char *arg, int flags)
       /* Try the next.  */
       arg = skip_to (0, arg);
     }
-      
-  len = grub_strlen (arg);
+
+  /* Skip FILE parameter */   
+  len = grub_strlen (skip_to (0, arg));
 
   /* Reset MB_CMDLINE.  */
   mb_cmdline = (char *) MB_CMDLINE_BUF;
@@ -2753,7 +2754,7 @@ kernel_func (char *arg, int flags)
     }
 
   /* Copy the command-line to MB_CMDLINE.  */
-  grub_memmove (mb_cmdline, arg, len + 1);
+  grub_memmove (mb_cmdline, skip_to (0, arg), len + 1);
   kernel_type = load_image (arg, mb_cmdline, suggested_type, load_flags);
   if (kernel_type == KERNEL_TYPE_NONE)
     return 1;

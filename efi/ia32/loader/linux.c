@@ -504,7 +504,7 @@ grub_load_linux (char *kernel, char *arg)
       linux_mem_size = 0;
   }
 
-  dest = grub_stpcpy ((char *) real_mode_mem + 0x1000, skip_to(0, arg));
+  dest = grub_stpcpy ((char *) real_mode_mem + 0x1000, arg);
 
   grub_seek ((setup_sects << SECTOR_BITS) + SECTOR_SIZE);
   len = prot_size;
