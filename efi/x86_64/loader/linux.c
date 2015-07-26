@@ -287,6 +287,7 @@ big_linux_boot (void)
   grub_efi_uintn_t desc_size;
   grub_efi_uint32_t desc_version;
   int e820_nr_map;
+  int called_exit;
 
   params = real_mode_mem;
 
@@ -294,18 +295,34 @@ big_linux_boot (void)
 
   grub_efi_disable_network();
 
+get_mem_map:
   if (grub_efi_get_memory_map (&map_key, &desc_size, &desc_version) <= 0)
     grub_fatal ("cannot get memory map");
+
+  called_exit = 0;
+  if (! grub_efi_exit_boot_services (map_key))
+    {
+      /*
+       * ExitBootServices() will fail if any of the event
+       * handlers change the memory map. In which case, we
+       * must be prepared to retry, but only once so that
+       * we're guaranteed to exit on repeated failures instead
+       * of spinning forever.
+       */
+      if (called_exit)
+        grub_fatal ("cannot exit boot services, aborted");
+
+      called_exit = 1;
+      grub_dprintf (__func__, "cannot exit boot services, retrying ...\n");
+      goto get_mem_map;
+    }
+
+  /* Note that no boot services are available from here.  */
 
   /* Pass e820 memmap. */
   e820_map_from_efi_map ((struct e820_entry *) params->e820_map, &e820_nr_map,
 			 mmap_buf, desc_size, mmap_size);
   params->e820_nr_map = e820_nr_map;
-
-  if (! grub_efi_exit_boot_services (map_key))
-    grub_fatal ("cannot exit boot services");
-
-  /* Note that no boot services are available from here.  */
 
   /* copy vmlinuz image to hdr.code32_start */
   memcpy ((char *)(unsigned long)(params->hdr.code32_start), (char *)prot_mode_mem,
